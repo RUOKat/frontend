@@ -1,0 +1,579 @@
+{
+  "onboarding": {
+    "q1_urinary_male": {
+      "id": "q1_urinary_male",
+      "text": "\ud654\uc7a5\uc2e4\uc5d0\uc11c \uc18c\ubcc0 \ubcfc \ub54c \ud3c9\uc18c\ubcf4\ub2e4 \uc624\ub798 \uc549\uc544 \uc788\uac70\ub098 \ud798\ub4e4\uc5b4\ud558\ub294 \uac83 \uac19\ub098\uc694?",
+      "description": "\uc218\ucef7 \uace0\uc591\uc774\ub294 \uc694\ub85c \ubb38\uc81c\uc5d0 \ucde8\uc57d\ud560 \uc218 \uc788\uc5b4\uc11c \ud655\uc778\ud574\uc694.",
+      "type": "single",
+      "options": [
+        {
+          "value": "never",
+          "label": "\uc804\ud600 \uc5c6\uc5b4\uc694",
+          "score": 0
+        },
+        {
+          "value": "rarely",
+          "label": "\uac00\ub054 \uadf8\ub798\uc694",
+          "score": 1
+        },
+        {
+          "value": "often",
+          "label": "\uc790\uc8fc \uadf8\ub798\uc694",
+          "score": 2
+        },
+        {
+          "value": "unknown",
+          "label": "\uc798 \ubaa8\ub974\uaca0\uc5b4\uc694",
+          "score": 0
+        }
+      ],
+      "category": "FLUTD"
+    },
+    "q1_urinary_general": {
+      "id": "q1_urinary_general",
+      "text": "\ucd5c\uadfc \ud654\uc7a5\uc2e4 \uc0ac\uc6a9 \ud69f\uc218\ub098 \ud328\ud134\uc5d0 \ubcc0\ud654\uac00 \uc788\uc5c8\ub098\uc694?",
+      "description": "\ud654\uc7a5\uc2e4 \uc2b5\uad00 \ubcc0\ud654\ub294 \uac74\uac15 \uc0c1\ud0dc\uc758 \uc911\uc694\ud55c \uc9c0\ud45c\uc608\uc694.",
+      "type": "single",
+      "options": [
+        {
+          "value": "same",
+          "label": "\ub611\uac19\uc544\uc694",
+          "score": 0
+        },
+        {
+          "value": "more",
+          "label": "\ub354 \uc790\uc8fc \uac00\uc694",
+          "score": 1
+        },
+        {
+          "value": "less",
+          "label": "\ub35c \uac00\uc694",
+          "score": 1
+        },
+        {
+          "value": "unknown",
+          "label": "\uc798 \ubaa8\ub974\uaca0\uc5b4\uc694",
+          "score": 0
+        }
+      ],
+      "category": "FLUTD"
+    },
+    "q2_water_senior": {
+      "id": "q2_water_senior",
+      "text": "\ubb3c\uc744 \ub9c8\uc2dc\ub294 \uc591\uc774 \uc608\uc804\ubcf4\ub2e4 \ub298\uc5c8\ub2e4\uace0 \ub290\ub07c\uc2dc\ub098\uc694?",
+      "description": "7\uc0b4 \uc774\uc0c1 \uace0\uc591\uc774\ub294 \uc2e0\uc7a5 \uac74\uac15\uc744 \uc8fc\uc758 \uae4a\uac8c \ubd10\uc57c \ud574\uc694.",
+      "type": "single",
+      "options": [
+        {
+          "value": "same",
+          "label": "\ube44\uc2b7\ud574\uc694",
+          "score": 0
+        },
+        {
+          "value": "little_more",
+          "label": "\uc870\uae08 \ub298\uc5c8\uc5b4\uc694",
+          "score": 1
+        },
+        {
+          "value": "much_more",
+          "label": "\ub9ce\uc774 \ub298\uc5c8\uc5b4\uc694",
+          "score": 2
+        },
+        {
+          "value": "unknown",
+          "label": "\uc798 \ubaa8\ub974\uaca0\uc5b4\uc694",
+          "score": 0
+        }
+      ],
+      "category": "CKD"
+    },
+    "q2_water_general": {
+      "id": "q2_water_general",
+      "text": "\ud558\ub8e8\uc5d0 \ubb3c\uc744 \uc5bc\ub9c8\ub098 \ub9c8\uc2dc\ub294 \uac83 \uac19\ub098\uc694?",
+      "description": "\ubb3c \uc12d\ucde8\ub7c9\uc740 \uc804\ubc18\uc801\uc778 \uac74\uac15 \uc0c1\ud0dc\ub97c \uc54c\ub824\uc918\uc694.",
+      "type": "single",
+      "options": [
+        {
+          "value": "little",
+          "label": "\uc801\uac8c \ub9c8\uc154\uc694",
+          "score": 1
+        },
+        {
+          "value": "normal",
+          "label": "\uc801\ub2f9\ud788 \ub9c8\uc154\uc694",
+          "score": 0
+        },
+        {
+          "value": "much",
+          "label": "\ub9ce\uc774 \ub9c8\uc154\uc694",
+          "score": 1
+        },
+        {
+          "value": "unknown",
+          "label": "\uc798 \ubaa8\ub974\uaca0\uc5b4\uc694",
+          "score": 0
+        }
+      ],
+      "category": "CKD"
+    },
+    "q3_vomiting": {
+      "id": "q3_vomiting",
+      "text": "\ucd5c\uadfc 2\uc8fc \ub3d9\uc548 \uad6c\ud1a0\ud55c \uc801\uc774 \uc788\ub098\uc694?",
+      "description": "\uac00\ub054 \ud138 \ud1a0\ub294 \uac74 \uc815\uc0c1\uc774\uc5d0\uc694. \ube48\ub3c4\uac00 \uc911\uc694\ud574\uc694.",
+      "type": "single",
+      "options": [
+        {
+          "value": "none",
+          "label": "\uc5c6\uc5b4\uc694",
+          "score": 0
+        },
+        {
+          "value": "once",
+          "label": "1-2\ubc88",
+          "score": 0
+        },
+        {
+          "value": "weekly",
+          "label": "\uc8fc 1\ud68c \uc774\uc0c1",
+          "score": 2
+        },
+        {
+          "value": "daily",
+          "label": "\uac70\uc758 \ub9e4\uc77c",
+          "score": 3
+        }
+      ],
+      "category": "GI"
+    },
+    "q4_mobility_senior": {
+      "id": "q4_mobility_senior",
+      "text": "\ub192\uc740 \uacf3\uc73c\ub85c \ub6f0\uc5b4\uc624\ub974\uac70\ub098 \uacc4\ub2e8 \uc624\ub974\ub294 \uac78 \ud53c\ud558\ub294 \uac83 \uac19\ub098\uc694?",
+      "description": "\ub098\uc774\uac00 \ub4e4\uba74 \uad00\uc808\uc774 \ubd88\ud3b8\ud560 \uc218 \uc788\uc5b4\uc694.",
+      "type": "single",
+      "options": [
+        {
+          "value": "no",
+          "label": "\uc544\ub2c8\uc694, \uc798 \ub6f0\uc5b4\uc694",
+          "score": 0
+        },
+        {
+          "value": "sometimes",
+          "label": "\uac00\ub054 \uc8fc\uc800\ud574\uc694",
+          "score": 1
+        },
+        {
+          "value": "often",
+          "label": "\uc790\uc8fc \ud53c\ud574\uc694",
+          "score": 2
+        },
+        {
+          "value": "unknown",
+          "label": "\uc798 \ubaa8\ub974\uaca0\uc5b4\uc694",
+          "score": 0
+        }
+      ],
+      "category": "PAIN"
+    },
+    "q4_activity_general": {
+      "id": "q4_activity_general",
+      "text": "\ud3c9\uc18c \ud65c\ub3d9\ub7c9\uc740 \uc5b4\ub5a4 \ud3b8\uc778\uac00\uc694?",
+      "description": "\uac11\uc791\uc2a4\ub7ec\uc6b4 \ud65c\ub3d9\ub7c9 \ubcc0\ud654\uac00 \uc788\ub2e4\uba74 \uccb4\ud06c\ud574\ubcfc \ud544\uc694\uac00 \uc788\uc5b4\uc694.",
+      "type": "single",
+      "options": [
+        {
+          "value": "active",
+          "label": "\ud65c\ubc1c\ud574\uc694",
+          "score": 0
+        },
+        {
+          "value": "normal",
+          "label": "\ubcf4\ud1b5\uc774\uc5d0\uc694",
+          "score": 0
+        },
+        {
+          "value": "lazy",
+          "label": "\uc870\uc6a9\ud55c \ud3b8\uc774\uc5d0\uc694",
+          "score": 0
+        },
+        {
+          "value": "decreased",
+          "label": "\ucd5c\uadfc \uc904\uc5c8\uc5b4\uc694",
+          "score": 2
+        }
+      ],
+      "category": "PAIN"
+    },
+    "q5_appetite": {
+      "id": "q5_appetite",
+      "text": "\ucd5c\uadfc \uc2dd\uc695\uc5d0 \ubcc0\ud654\uac00 \uc788\uc5c8\ub098\uc694?",
+      "description": "\uc2dd\uc695 \ubcc0\ud654\ub294 \uc5ec\ub7ec \uac74\uac15 \ubb38\uc81c\uc758 \ucd08\uae30 \uc2e0\ud638\uc77c \uc218 \uc788\uc5b4\uc694.",
+      "type": "single",
+      "options": [
+        {
+          "value": "same",
+          "label": "\ub611\uac19\uc544\uc694",
+          "score": 0
+        },
+        {
+          "value": "increased",
+          "label": "\ub354 \uba39\uc5b4\uc694",
+          "score": 1
+        },
+        {
+          "value": "decreased",
+          "label": "\ub35c \uba39\uc5b4\uc694",
+          "score": 2
+        },
+        {
+          "value": "picky",
+          "label": "\uae4c\ub2e4\ub85c\uc6cc\uc84c\uc5b4\uc694",
+          "score": 1
+        }
+      ],
+      "category": "GI"
+    }
+  },
+  "followUp": {
+    "FLUTD": [
+      {
+        "id": "fu_flutd_1",
+        "text": "\ubc30\ub1e8 \uc2dc \uc6b8\uc74c\uc18c\ub9ac\ub97c \ub0b4\uac70\ub098 \ubd88\ud3b8\ud574 \ubcf4\uc774\ub098\uc694?",
+        "description": "\ubc30\ub1e8 \uc2dc \ud1b5\uc99d\uc740 \uc694\ub85c \ubb38\uc81c\uc758 \uc911\uc694\ud55c \uc2e0\ud638\uc608\uc694.",
+        "type": "single",
+        "options": [
+          {
+            "value": "yes",
+            "label": "\uc608",
+            "score": 2
+          },
+          {
+            "value": "no",
+            "label": "\uc544\ub2c8\uc624",
+            "score": 0
+          },
+          {
+            "value": "unknown",
+            "label": "\ubaa8\ub984",
+            "score": 0
+          }
+        ],
+        "category": "FLUTD"
+      },
+      {
+        "id": "fu_flutd_2",
+        "text": "\uc18c\ubcc0 \uc0c9\uc774 \uc9c4\ud558\uac70\ub098 \ud53c\uac00 \uc11e\uc778 \uac83 \uac19\ub098\uc694?",
+        "description": "\uc18c\ubcc0 \uc0c9 \ubcc0\ud654\ub294 \uc8fc\uc758\uac00 \ud544\uc694\ud574\uc694.",
+        "type": "single",
+        "options": [
+          {
+            "value": "yes",
+            "label": "\uc608",
+            "score": 2
+          },
+          {
+            "value": "no",
+            "label": "\uc544\ub2c8\uc624",
+            "score": 0
+          },
+          {
+            "value": "unknown",
+            "label": "\ubaa8\ub984",
+            "score": 0
+          }
+        ],
+        "category": "FLUTD"
+      },
+      {
+        "id": "fu_flutd_3",
+        "text": "\ud654\uc7a5\uc2e4\uc5d0 \uc790\uc8fc \uac00\ub294\ub370 \uc18c\ubcc0\ub7c9\uc774 \uc801\uc740 \uac83 \uac19\ub098\uc694?",
+        "description": "\ube48\ub1e8\ub294 \ubc29\uad11 \ubb38\uc81c\uc758 \uc2e0\ud638\uc77c \uc218 \uc788\uc5b4\uc694.",
+        "type": "single",
+        "options": [
+          {
+            "value": "none",
+            "label": "\uc5c6\uc5b4\uc694",
+            "score": 0
+          },
+          {
+            "value": "slight",
+            "label": "\uc57d\uac04",
+            "score": 1
+          },
+          {
+            "value": "clear",
+            "label": "\ub69c\ub837\ud568",
+            "score": 2
+          },
+          {
+            "value": "unknown",
+            "label": "\ubaa8\ub984",
+            "score": 0
+          }
+        ],
+        "category": "FLUTD"
+      }
+    ],
+    "CKD": [
+      {
+        "id": "fu_ckd_1",
+        "text": "\ubb3c \uc12d\ucde8\ub7c9\uc774 \ub208\uc5d0 \ub744\uac8c \uc99d\uac00\ud588\ub098\uc694?",
+        "description": "\ub2e4\uc74c\ub2e4\ub1e8\ub294 \uc2e0\uc7a5 \ubb38\uc81c\uc758 \ucd08\uae30 \uc2e0\ud638\uc77c \uc218 \uc788\uc5b4\uc694.",
+        "type": "single",
+        "options": [
+          {
+            "value": "none",
+            "label": "\uc5c6\uc5b4\uc694",
+            "score": 0
+          },
+          {
+            "value": "slight",
+            "label": "\uc57d\uac04",
+            "score": 1
+          },
+          {
+            "value": "clear",
+            "label": "\ub69c\ub837\ud568",
+            "score": 2
+          },
+          {
+            "value": "unknown",
+            "label": "\ubaa8\ub984",
+            "score": 0
+          }
+        ],
+        "category": "CKD"
+      },
+      {
+        "id": "fu_ckd_2",
+        "text": "\ubc30\ub1e8 \ud69f\uc218\ub098 \uc18c\ubcc0\ub7c9\uc774 \uc99d\uac00\ud588\ub098\uc694?",
+        "description": "\uc18c\ubcc0\ub7c9 \uc99d\uac00\ub294 \uc2e0\uc7a5 \uae30\ub2a5\uacfc \uad00\ub828\uc788\uc5b4\uc694.",
+        "type": "single",
+        "options": [
+          {
+            "value": "none",
+            "label": "\uc5c6\uc5b4\uc694",
+            "score": 0
+          },
+          {
+            "value": "slight",
+            "label": "\uc57d\uac04",
+            "score": 1
+          },
+          {
+            "value": "clear",
+            "label": "\ub69c\ub837\ud568",
+            "score": 2
+          },
+          {
+            "value": "unknown",
+            "label": "\ubaa8\ub984",
+            "score": 0
+          }
+        ],
+        "category": "CKD"
+      },
+      {
+        "id": "fu_ckd_3",
+        "text": "\uccb4\uc911\uc774 \uac10\uc18c\ud55c \uac83 \uac19\ub098\uc694?",
+        "description": "\uc6d0\uc778 \ubaa8\ub97c \uccb4\uc911 \uac10\uc18c\ub294 \ud655\uc778\uc774 \ud544\uc694\ud574\uc694.",
+        "type": "single",
+        "options": [
+          {
+            "value": "none",
+            "label": "\uc5c6\uc5b4\uc694",
+            "score": 0
+          },
+          {
+            "value": "slight",
+            "label": "\uc57d\uac04",
+            "score": 1
+          },
+          {
+            "value": "clear",
+            "label": "\ub69c\ub837\ud568",
+            "score": 2
+          },
+          {
+            "value": "unknown",
+            "label": "\ubaa8\ub984",
+            "score": 0
+          }
+        ],
+        "category": "CKD"
+      }
+    ],
+    "GI": [
+      {
+        "id": "fu_gi_1",
+        "text": "\ucd5c\uadfc 2\uc8fc \ub0b4 \uad6c\ud1a0\uac00 \uc8fc 1\ud68c \uc774\uc0c1 \uc788\uc5c8\ub098\uc694?",
+        "description": "\uc7a6\uc740 \uad6c\ud1a0\ub294 \uc18c\ud654\uae30 \ubb38\uc81c\uc77c \uc218 \uc788\uc5b4\uc694.",
+        "type": "single",
+        "options": [
+          {
+            "value": "yes",
+            "label": "\uc608",
+            "score": 2
+          },
+          {
+            "value": "no",
+            "label": "\uc544\ub2c8\uc624",
+            "score": 0
+          },
+          {
+            "value": "unknown",
+            "label": "\ubaa8\ub984",
+            "score": 0
+          }
+        ],
+        "category": "GI"
+      },
+      {
+        "id": "fu_gi_2",
+        "text": "\ubb3d\uc740 \ubcc0\uc758 \ube48\ub3c4\ub294 \uc5b4\ub5a4\uac00\uc694?",
+        "description": "\uc124\uc0ac \ube48\ub3c4\ub85c \uc18c\ud654\uae30 \uc0c1\ud0dc\ub97c \ud30c\uc545\ud574\uc694.",
+        "type": "single",
+        "options": [
+          {
+            "value": "rarely",
+            "label": "\ub4dc\ubb3c\uac8c",
+            "score": 0
+          },
+          {
+            "value": "sometimes",
+            "label": "\uac00\ub054",
+            "score": 1
+          },
+          {
+            "value": "often",
+            "label": "\uc790\uc8fc",
+            "score": 2
+          },
+          {
+            "value": "daily",
+            "label": "\uac70\uc758 \ub9e4\uc77c",
+            "score": 3
+          },
+          {
+            "value": "unknown",
+            "label": "\ubaa8\ub984",
+            "score": 0
+          }
+        ],
+        "category": "GI"
+      },
+      {
+        "id": "fu_gi_3",
+        "text": "\uc2dd\uc695\uc774 \uac10\uc18c\ud588\ub098\uc694?",
+        "description": "\uc2dd\uc695 \uc800\ud558\ub294 \ub2e4\uc591\ud55c \ubb38\uc81c\uc758 \uc2e0\ud638\uc608\uc694.",
+        "type": "single",
+        "options": [
+          {
+            "value": "none",
+            "label": "\uc5c6\uc5b4\uc694",
+            "score": 0
+          },
+          {
+            "value": "slight",
+            "label": "\uc57d\uac04",
+            "score": 1
+          },
+          {
+            "value": "clear",
+            "label": "\ub69c\ub837\ud568",
+            "score": 2
+          },
+          {
+            "value": "unknown",
+            "label": "\ubaa8\ub984",
+            "score": 0
+          }
+        ],
+        "category": "GI"
+      }
+    ],
+    "PAIN": [
+      {
+        "id": "fu_pain_1",
+        "text": "\uc810\ud504\ub098 \uacc4\ub2e8\uc744 \ud53c\ud558\ub294 \uac83 \uac19\ub098\uc694?",
+        "description": "\uc6c0\uc9c1\uc784 \ud68c\ud53c\ub294 \uad00\uc808 \ubd88\ud3b8\uc758 \uc2e0\ud638\uc608\uc694.",
+        "type": "single",
+        "options": [
+          {
+            "value": "none",
+            "label": "\uc5c6\uc5b4\uc694",
+            "score": 0
+          },
+          {
+            "value": "slight",
+            "label": "\uc57d\uac04",
+            "score": 1
+          },
+          {
+            "value": "clear",
+            "label": "\ub69c\ub837\ud568",
+            "score": 2
+          },
+          {
+            "value": "unknown",
+            "label": "\ubaa8\ub984",
+            "score": 0
+          }
+        ],
+        "category": "PAIN"
+      },
+      {
+        "id": "fu_pain_2",
+        "text": "\uadf8\ub8e8\ubc0d\uc774 \uc904\uc5c8\uac70\ub098 \ub9cc\uc9c0\uba74 \uc2eb\uc5b4\ud558\ub098\uc694?",
+        "description": "\uc790\uac00 \uad00\ub9ac \ubcc0\ud654\ub294 \ubd88\ud3b8\ud568\uc758 \uc2e0\ud638\uc77c \uc218 \uc788\uc5b4\uc694.",
+        "type": "single",
+        "options": [
+          {
+            "value": "yes",
+            "label": "\uc608",
+            "score": 2
+          },
+          {
+            "value": "no",
+            "label": "\uc544\ub2c8\uc624",
+            "score": 0
+          },
+          {
+            "value": "unknown",
+            "label": "\ubaa8\ub984",
+            "score": 0
+          }
+        ],
+        "category": "PAIN"
+      },
+      {
+        "id": "fu_pain_3",
+        "text": "\uc228\ub294 \uc2dc\uac04\uc774 \ub298\uc5c8\ub098\uc694?",
+        "description": "\uace0\uc591\uc774\ub294 \uc544\ud504\uba74 \uc228\uc73c\ub824\ub294 \uacbd\ud5a5\uc774 \uc788\uc5b4\uc694.",
+        "type": "single",
+        "options": [
+          {
+            "value": "none",
+            "label": "\uc5c6\uc5b4\uc694",
+            "score": 0
+          },
+          {
+            "value": "slight",
+            "label": "\uc57d\uac04",
+            "score": 1
+          },
+          {
+            "value": "clear",
+            "label": "\ub69c\ub837\ud568",
+            "score": 2
+          },
+          {
+            "value": "unknown",
+            "label": "\ubaa8\ub984",
+            "score": 0
+          }
+        ],
+        "category": "PAIN"
+      }
+    ]
+  }
+}
