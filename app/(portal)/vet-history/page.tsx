@@ -5,15 +5,17 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { loadVetVisits } from "@/lib/storage"
 import type { VetVisit } from "@/lib/types"
+import { useActiveCat } from "@/contexts/active-cat-context"
 import { Stethoscope, Plus, ChevronRight, Calendar } from "lucide-react"
 
 export default function VetHistoryPage() {
+  const { activeCatId } = useActiveCat()
   const [visits, setVisits] = useState<VetVisit[]>([])
 
   useEffect(() => {
-    const loaded = loadVetVisits<VetVisit>()
+    const loaded = loadVetVisits<VetVisit>(activeCatId ?? undefined)
     setVisits(loaded)
-  }, [])
+  }, [activeCatId])
 
   return (
     <div className="min-h-screen bg-background">

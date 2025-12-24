@@ -4,7 +4,7 @@ import { Noto_Sans_KR } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { SplashGate } from "@/components/app/splash-gate"
 import { AuthProvider } from "@/contexts/auth-context"
-import { CatProfileProvider } from "@/contexts/cat-profile-context"
+import { ActiveCatProvider } from "@/contexts/active-cat-context"
 import { OnboardingProvider } from "@/contexts/onboarding-context"
 import "./globals.css"
 
@@ -33,11 +33,11 @@ export default function RootLayout({
     <html lang="ko">
       <body className={`${notoSansKR.className} antialiased`}>
         <AuthProvider>
-          <CatProfileProvider>
+          <ActiveCatProvider>
             <OnboardingProvider>
               <SplashGate>{children}</SplashGate>
             </OnboardingProvider>
-          </CatProfileProvider>
+          </ActiveCatProvider>
         </AuthProvider>
         <Analytics />
       </body>

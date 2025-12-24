@@ -9,11 +9,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { loadDailyRecords, saveDailyRecords } from "@/lib/storage"
 import type { DailyRecord } from "@/lib/types"
+import { useActiveCat } from "@/contexts/active-cat-context"
 import { ArrowLeft, Droplets, Activity, Utensils, AlertCircle } from "lucide-react"
 import Link from "next/link"
 
 export default function NewRecordPage() {
   const router = useRouter()
+  const { activeCatId } = useActiveCat()
   const today = new Date().toISOString().split("T")[0]
 
   const [urineCount, setUrineCount] = useState(2)
@@ -29,7 +31,7 @@ export default function NewRecordPage() {
   const [existingRecordId, setExistingRecordId] = useState<string | null>(null)
 
   useEffect(() => {
-    const records = loadDailyRecords<DailyRecord>()
+    const records = loadDailyRecords<DailyRecord>(activeCatId ?? undefined)
     const todayRecord = records.find((r) => r.date === today)
     if (todayRecord) {
       setExistingRecordId(todayRecord.id)
@@ -43,12 +45,12 @@ export default function NewRecordPage() {
       setVomitCount(todayRecord.vomitCount || 1)
       setNotes(todayRecord.notes || "")
     }
-  }, [today])
+  }, [activeCatId, today])
 
   const handleSubmit = () => {
     setIsSubmitting(true)
 
-    const records = loadDailyRecords<DailyRecord>()
+    const records = loadDailyRecords<DailyRecord>(activeCatId ?? undefined)
     const newRecord: DailyRecord = {
       id: existingRecordId || `record-${Date.now()}`,
       date: today,
@@ -75,7 +77,7 @@ export default function NewRecordPage() {
       records.unshift(newRecord)
     }
 
-    saveDailyRecords(records)
+    saveDailyRecords(records, activeCatId ?? undefined)
     router.push("/record")
   }
 

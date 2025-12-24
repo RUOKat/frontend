@@ -5,16 +5,18 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { loadDailyRecords } from "@/lib/storage"
 import type { DailyRecord } from "@/lib/types"
+import { useActiveCat } from "@/contexts/active-cat-context"
 import { PenSquare, Calendar, ChevronRight } from "lucide-react"
 import { useEffect, useState } from "react"
 
 export default function RecordPage() {
+  const { activeCatId } = useActiveCat()
   const [records, setRecords] = useState<DailyRecord[]>([])
 
   useEffect(() => {
-    const loaded = loadDailyRecords<DailyRecord>()
+    const loaded = loadDailyRecords<DailyRecord>(activeCatId ?? undefined)
     setRecords(loaded.slice(0, 7))
-  }, [])
+  }, [activeCatId])
 
   const today = new Date().toISOString().split("T")[0]
   const hasTodayRecord = records.some((r) => r.date === today)

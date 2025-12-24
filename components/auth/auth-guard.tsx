@@ -3,7 +3,7 @@
 import { useEffect, type ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { useCatProfile } from "@/contexts/cat-profile-context"
+import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
 import { Loader2 } from "lucide-react"
 
@@ -15,14 +15,8 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter()
   const pathname = usePathname()
   const { isAuthenticated, isLoading: authLoading } = useAuth()
-  const { catProfile, isLoading: catLoading } = useCatProfile()
-  const {
-    onboardingAnswers,
-    followUpPlan,
-    followUpAnswers,
-    onboardingCompleted,
-    isLoading: onboardingLoading,
-  } = useOnboarding()
+  const { cats, activeCatId, isLoading: catLoading } = useActiveCat()
+  const { followUpPlan, onboardingCompleted, isLoading: onboardingLoading } = useOnboarding()
   const isLoading = authLoading || catLoading || onboardingLoading
 
   // 공개 경로
@@ -42,14 +36,12 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
     // 인증되어 있고 공개 페이지면 온보딩 상태에 따라 리디렉션
     if (isAuthenticated && isPublicPath && pathname !== "/auth/callback") {
-      if (!catProfile) {
-        router.replace("/onboarding/cat")
-      } else if (!onboardingAnswers) {
-        router.replace("/onboarding/consent")
-      } else if (followUpPlan && !followUpAnswers) {
-        router.replace("/onboarding/follow-up")
-      } else {
-        router.replace("/")
+        if (cats.length === 0) {
+          router.replace("/onboarding/cat")
+        } else if (!onboardingCompleted) {
+          router.replace("/onboarding/consent")
+        } else {
+          router.replace("/")
       }
       return
     }
@@ -57,42 +49,36 @@ export function AuthGuard({ children }: AuthGuardProps) {
     // 인증되어 있지만 온보딩이 안 되어 있을 때
     if (isAuthenticated && !isOnboardingPath && !isPublicPath) {
       // 2. catProfile 없으면 /onboarding/cat
-      if (!catProfile) {
+      if (cats.length === 0) {
         router.replace("/onboarding/cat")
         return
       }
 
-      // 3. onboardingAnswers 없으면 /onboarding/questions
-      if (!onboardingAnswers) {
+      // 3. consent 완료 전이면 /onboarding/consent
+      if (!onboardingCompleted) {
         router.replace("/onboarding/consent")
-        return
-      }
-
-      // 4. followUpPlan 있는데 followUpAnswers 없으면 /onboarding/follow-up
-      if (followUpPlan && !followUpAnswers) {
-        router.replace("/onboarding/follow-up")
         return
       }
     }
 
     // 온보딩 페이지 접근 제어
     if (isAuthenticated && isOnboardingPath) {
-      if (pathname === "/onboarding/consent" && !catProfile) {
+      if (pathname === "/onboarding/consent" && cats.length === 0) {
         router.replace("/onboarding/cat")
         return
       }
 
-      if (pathname === "/onboarding/questions" && !catProfile) {
+      if (pathname === "/onboarding/questions" && cats.length === 0) {
         router.replace("/onboarding/cat")
         return
       }
 
       if (pathname === "/onboarding/follow-up") {
-        if (!catProfile) {
+        if (cats.length === 0) {
           router.replace("/onboarding/cat")
           return
         }
-        if (!onboardingAnswers) {
+        if (!onboardingCompleted) {
           router.replace("/onboarding/consent")
           return
         }
@@ -102,14 +88,18 @@ export function AuthGuard({ children }: AuthGuardProps) {
           return
         }
       }
+
+      if (pathname === "/onboarding/questions" && !onboardingCompleted) {
+        router.replace("/onboarding/consent")
+        return
+      }
     }
   }, [
     isLoading,
     isAuthenticated,
-    catProfile,
-    onboardingAnswers,
+    cats,
+    activeCatId,
     followUpPlan,
-    followUpAnswers,
     onboardingCompleted,
     pathname,
     router,

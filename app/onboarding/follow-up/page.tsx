@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { useCatProfile } from "@/contexts/cat-profile-context"
+import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
 import { computeRiskStatus } from "@/lib/risk"
 import { getCategoryName } from "@/lib/triage"
@@ -14,8 +14,8 @@ import { Stethoscope, ArrowRight, ArrowLeft, HelpCircle, AlertTriangle } from "l
 
 export default function FollowUpPage() {
   const router = useRouter()
-  const { catProfile } = useCatProfile()
-  const { onboardingAnswers, followUpPlan, setFollowUpAnswers, setRiskStatus, setOnboardingCompleted } = useOnboarding()
+  const { activeCat } = useActiveCat()
+  const { onboardingAnswers, followUpPlan, setFollowUpAnswers, setRiskStatus } = useOnboarding()
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<OnboardingAnswers>({})
@@ -61,19 +61,18 @@ export default function FollowUpPage() {
   }
 
   const handleComplete = async () => {
-    if (!catProfile || !onboardingAnswers) return
+    if (!activeCat || !onboardingAnswers) return
 
     setIsSubmitting(true)
+    setFollowUpAnswers(answers)
 
     // 1. 답변 저장
     setFollowUpAnswers(answers)
 
     // 2. 위험도 계산
-    const risk = computeRiskStatus(catProfile, onboardingAnswers, followUpPlan, answers)
+    const risk = computeRiskStatus(activeCat, onboardingAnswers, followUpPlan, answers)
     setRiskStatus(risk)
-
-    // 3. 온보딩 완료
-    setOnboardingCompleted(true)
+    router.push("/")
 
     // 4. 홈으로
     router.push("/")
@@ -100,7 +99,7 @@ export default function FollowUpPage() {
             <p className="text-sm text-amber-800">
               <span className="font-medium">{categoryName}</span> 관련 신호가 보여서 확인 질문 3개만 더 물어볼게요.
               <br />
-              <span className="text-xs opacity-80">(진단이 아니라 참고용이에요)</span>
+              <span className="text-xs opacity-80">(판단이 아니라 참고용이에요)</span>
             </p>
           </div>
         </div>

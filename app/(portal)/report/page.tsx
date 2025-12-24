@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useCatProfile } from "@/contexts/cat-profile-context"
+import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
 import { loadDailyRecords } from "@/lib/storage"
 import type { DailyRecord } from "@/lib/types"
@@ -9,14 +9,14 @@ import { FileText, TrendingUp, Calendar, Activity } from "lucide-react"
 import { useEffect, useState } from "react"
 
 export default function ReportPage() {
-  const { catProfile } = useCatProfile()
+  const { activeCat, activeCatId } = useActiveCat()
   const { riskStatus } = useOnboarding()
   const [records, setRecords] = useState<DailyRecord[]>([])
 
   useEffect(() => {
-    const loaded = loadDailyRecords<DailyRecord>()
+    const loaded = loadDailyRecords<DailyRecord>(activeCatId ?? undefined)
     setRecords(loaded)
-  }, [])
+  }, [activeCatId])
 
   // 최근 7일 통계
   const recentRecords = records.slice(0, 7)
@@ -36,7 +36,7 @@ export default function ReportPage() {
       <header className="px-6 pt-safe-top">
         <div className="py-6">
           <h1 className="text-xl font-bold text-foreground">리포트</h1>
-          <p className="text-sm text-muted-foreground mt-1">{catProfile?.name || "고양이"}의 건강 분석 리포트</p>
+          <p className="text-sm text-muted-foreground mt-1">{activeCat?.name || "고양이"}의 건강 분석 리포트</p>
         </div>
       </header>
 

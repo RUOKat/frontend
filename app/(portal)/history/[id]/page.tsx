@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { loadDailyRecords, saveDailyRecords } from "@/lib/storage"
 import type { DailyRecord } from "@/lib/types"
+import { useActiveCat } from "@/contexts/active-cat-context"
 import { ArrowLeft, Droplets, Utensils, Activity, AlertCircle, Trash2, PenSquare } from "lucide-react"
 import {
   AlertDialog,
@@ -23,20 +24,21 @@ import {
 export default function RecordDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const { activeCatId } = useActiveCat()
   const [record, setRecord] = useState<DailyRecord | null>(null)
 
   useEffect(() => {
-    const records = loadDailyRecords<DailyRecord>()
+    const records = loadDailyRecords<DailyRecord>(activeCatId ?? undefined)
     const found = records.find((r) => r.id === params.id)
     if (found) {
       setRecord(found)
     }
-  }, [params.id])
+  }, [activeCatId, params.id])
 
   const handleDelete = () => {
-    const records = loadDailyRecords<DailyRecord>()
+    const records = loadDailyRecords<DailyRecord>(activeCatId ?? undefined)
     const filtered = records.filter((r) => r.id !== params.id)
-    saveDailyRecords(filtered)
+    saveDailyRecords(filtered, activeCatId ?? undefined)
     router.push("/history")
   }
 

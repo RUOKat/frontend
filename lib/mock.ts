@@ -10,6 +10,7 @@ export const mockUser: User = {
 // Mock 고양이 프로필 (온보딩 완료 상태 테스트용)
 export const mockCatProfile: CatProfile = {
   name: "나비",
+  adoptionPath: "보호소/입양기관",
   birthDate: "2020-03-15",
   unknownBirthday: false,
   gender: "female",

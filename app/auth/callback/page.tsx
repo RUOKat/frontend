@@ -3,9 +3,10 @@
 import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { useCatProfile } from "@/contexts/cat-profile-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
 import { exchangeCodeForTokens, parseIdToken } from "@/lib/cognito"
+import { loadCatProfile, loadCats } from "@/lib/storage"
+import type { CatProfile } from "@/lib/types"
 import { Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -14,8 +15,7 @@ function CallbackContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { login } = useAuth()
-  const { catProfile } = useCatProfile()
-  const { onboardingAnswers, followUpPlan, followUpAnswers } = useOnboarding()
+  const { onboardingCompleted } = useOnboarding()
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -59,12 +59,12 @@ function CallbackContent() {
         )
 
         // 온보딩 상태에 따라 라우팅
-        if (!catProfile) {
+        const storedCats = loadCats<CatProfile>()
+        const hasCats = storedCats.length > 0 || Boolean(loadCatProfile<CatProfile>())
+        if (!hasCats) {
           router.replace("/onboarding/cat")
-        } else if (!onboardingAnswers) {
+        } else if (!onboardingCompleted) {
           router.replace("/onboarding/consent")
-        } else if (followUpPlan && !followUpAnswers) {
-          router.replace("/onboarding/follow-up")
         } else {
           router.replace("/")
         }
@@ -75,7 +75,7 @@ function CallbackContent() {
     }
 
     handleCallback()
-  }, [searchParams, login, router, catProfile, onboardingAnswers, followUpPlan, followUpAnswers])
+  }, [searchParams, login, router, onboardingCompleted])
 
   if (error) {
     return (

@@ -2,13 +2,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { StatusBadge } from "@/components/app/status-badge"
-import { useCatProfile } from "@/contexts/cat-profile-context"
+import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
 import { getCategoryName } from "@/lib/triage"
 import { Activity, AlertCircle, CheckCircle2, AlertTriangle, FileText, Lightbulb } from "lucide-react"
 
 export default function MonitoringPage() {
-  const { catProfile } = useCatProfile()
+  const { activeCat } = useActiveCat()
   const { riskStatus, followUpPlan, followUpAnswers } = useOnboarding()
 
   const Icon =
@@ -27,7 +27,7 @@ export default function MonitoringPage() {
       <header className="px-6 pt-safe-top">
         <div className="py-6">
           <h1 className="text-xl font-bold text-foreground">모니터링</h1>
-          <p className="text-sm text-muted-foreground mt-1">{catProfile?.name || "고양이"}의 건강 상태를 확인해요</p>
+          <p className="text-sm text-muted-foreground mt-1">{activeCat?.name || "고양이"}의 건강 상태를 확인해요</p>
         </div>
       </header>
 

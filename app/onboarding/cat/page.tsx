@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type ChangeEvent } from "react"
+import { useEffect, useState, type ChangeEvent } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,8 +9,9 @@ import { Switch } from "@/components/ui/switch"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { useCatProfile } from "@/contexts/cat-profile-context"
+import { useActiveCat } from "@/contexts/active-cat-context"
 import { catBreeds } from "@/lib/mock"
+import { clearNewCatMode, loadNewCatMode } from "@/lib/storage"
 import type { CatProfile, MedicalCondition } from "@/lib/types"
 import { Cat, ChevronDown, ChevronUp, ArrowRight } from "lucide-react"
 
@@ -26,15 +27,28 @@ const medicalConditions: { value: MedicalCondition; label: string }[] = [
   { value: "unknown", label: "모름" },
 ]
 
+const adoptionPaths = ["보호소/입양기관", "지인/가족", "길에서 구조", "기타"]
+
+function createCatId(): string {
+  const cryptoObj = typeof globalThis !== "undefined" ? globalThis.crypto : undefined
+  const uuid = (cryptoObj as Crypto & { randomUUID?: () => string })?.randomUUID?.()
+  if (uuid) return uuid
+  return `cat-${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
 export default function CatProfilePage() {
   const router = useRouter()
-  const { setCatProfile } = useCatProfile()
+  const { activeCat, activeCatId, addCat, updateCat, cats } = useActiveCat()
   const [showOptional, setShowOptional] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null)
+  const [isNewCatMode, setIsNewCatMode] = useState(false)
 
   // 필수 필드
   const [name, setName] = useState("")
+  const [adoptionPath, setAdoptionPath] = useState("")
+  const [customAdoptionPath, setCustomAdoptionPath] = useState("")
+  const [adoptionAgencyCode, setAdoptionAgencyCode] = useState("")
   const [unknownBirthday, setUnknownBirthday] = useState(false)
   const [birthDate, setBirthDate] = useState("")
   const [estimatedAge, setEstimatedAge] = useState("")
@@ -59,8 +73,36 @@ export default function CatProfilePage() {
   const [notes, setNotes] = useState("")
   const [vetInfo, setVetInfo] = useState("")
 
+  const isAgencyAdoption = adoptionPath === "보호소/입양기관"
+  const trimmedAgencyCode = adoptionAgencyCode.trim()
+  const isAgencyCodeValid = !isAgencyAdoption || trimmedAgencyCode.length >= 4
+  const showAgencyCodeError = isAgencyAdoption && trimmedAgencyCode.length < 4
+
+  const hasAdoptionPath = adoptionPath && (adoptionPath !== "기타" || customAdoptionPath.trim())
   const isValid =
-    name.trim() && (unknownBirthday ? estimatedAge : birthDate) && gender && breed && weight && foodType && waterSource
+    name.trim() &&
+    hasAdoptionPath &&
+    isAgencyCodeValid &&
+    (unknownBirthday ? estimatedAge : birthDate) &&
+    gender &&
+    breed &&
+    weight &&
+    foodType &&
+    waterSource
+
+  useEffect(() => {
+    if (!isAgencyAdoption) {
+      setAdoptionAgencyCode("")
+    }
+  }, [isAgencyAdoption])
+
+  useEffect(() => {
+    const isNew = loadNewCatMode()
+    setIsNewCatMode(isNew)
+    if (isNew) {
+      clearNewCatMode()
+    }
+  }, [])
 
   const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -86,9 +128,14 @@ export default function CatProfilePage() {
     if (!isValid) return
 
     setIsSubmitting(true)
+    const isCreating = isNewCatMode || cats.length === 0 || !activeCat
+    const nextId = isCreating ? createCatId() : activeCat.id ?? activeCatId ?? createCatId()
 
     const profile: CatProfile = {
+      id: nextId,
       name: name.trim(),
+      adoptionPath: adoptionPath === "기타" ? customAdoptionPath.trim() : adoptionPath,
+      adoptionAgencyCode: isAgencyAdoption ? trimmedAgencyCode : undefined,
       unknownBirthday,
       birthDate: unknownBirthday ? undefined : birthDate,
       estimatedAge: unknownBirthday ? Number.parseInt(estimatedAge, 10) : undefined,
@@ -112,7 +159,11 @@ export default function CatProfilePage() {
       profilePhoto: profilePhoto || undefined,
     }
 
-    setCatProfile(profile)
+    if (isCreating) {
+      addCat(profile)
+    } else {
+      updateCat(profile)
+    }
     router.push("/onboarding/consent")
   }
 
@@ -170,6 +221,48 @@ export default function CatProfilePage() {
                   placeholder="고양이 이름"
                   maxLength={20}
                 />
+              </div>
+
+              {/* 입양 경로 */}
+              <div className="space-y-2">
+                <Label>입양 경로</Label>
+                <Select value={adoptionPath} onValueChange={setAdoptionPath}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="입양 경로 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {adoptionPaths.map((path) => (
+                      <SelectItem key={path} value={path}>
+                        {path}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {adoptionPath === "기타" && (
+                  <Input
+                    value={customAdoptionPath}
+                    onChange={(e) => setCustomAdoptionPath(e.target.value)}
+                    placeholder="입양 경로 입력"
+                    className="mt-2"
+                  />
+                )}
+                {isAgencyAdoption && (
+                  <div className="mt-2 space-y-2">
+                    <Label htmlFor="adoptionAgencyCode">기관 코드</Label>
+                    <Input
+                      id="adoptionAgencyCode"
+                      value={adoptionAgencyCode}
+                      onChange={(e) => setAdoptionAgencyCode(e.target.value)}
+                      placeholder="예) RUOKAT-1234"
+                    />
+                    <p className="text-xs text-muted-foreground">입양기관에서 받은 코드를 입력해 주세요.</p>
+                    {showAgencyCodeError && (
+                      <p className="text-xs text-destructive">
+                        기관 입양을 선택한 경우 기관 코드는 필수입니다.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* 생년월일 */}

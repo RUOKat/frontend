@@ -5,18 +5,19 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { useCatProfile } from "@/contexts/cat-profile-context"
+import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
 import { generateOnboardingQuestions } from "@/lib/questions"
 import { evaluateSuspicion } from "@/lib/triage"
 import { computeRiskStatus } from "@/lib/risk"
+import { getTodayISO, updateMonthlyCare } from "@/lib/care-monthly"
 import type { Question, OnboardingAnswers } from "@/lib/types"
 import { MessageCircle, ArrowRight, ArrowLeft, HelpCircle } from "lucide-react"
 
 export default function QuestionsPage() {
   const router = useRouter()
-  const { catProfile } = useCatProfile()
-  const { setOnboardingAnswers, setFollowUpPlan, setRiskStatus, setOnboardingCompleted } = useOnboarding()
+  const { activeCat, activeCatId } = useActiveCat()
+  const { setOnboardingAnswers, setFollowUpPlan, setRiskStatus } = useOnboarding()
 
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -24,11 +25,11 @@ export default function QuestionsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
-    if (catProfile) {
-      const generatedQuestions = generateOnboardingQuestions(catProfile)
+    if (activeCat) {
+      const generatedQuestions = generateOnboardingQuestions(activeCat)
       setQuestions(generatedQuestions)
     }
-  }, [catProfile])
+  }, [activeCat])
 
   const currentQuestion = questions[currentIndex]
   const progress = ((currentIndex + 1) / questions.length) * 100
@@ -60,15 +61,17 @@ export default function QuestionsPage() {
   }
 
   const handleComplete = async () => {
-    if (!catProfile) return
+    if (!activeCat) return
 
     setIsSubmitting(true)
+    setOnboardingAnswers(answers)
 
     // 1. 답변 저장
     setOnboardingAnswers(answers)
 
     // 2. 의심 평가
-    const followUp = evaluateSuspicion(catProfile, answers)
+    const followUp = evaluateSuspicion(activeCat, answers)
+    updateMonthlyCare(getTodayISO(), activeCatId ?? undefined)
 
     if (followUp) {
       // 의심 징후가 있으면 follow-up 필요
@@ -76,9 +79,8 @@ export default function QuestionsPage() {
       router.push("/onboarding/follow-up")
     } else {
       // 의심 징후 없으면 바로 완료
-      const risk = computeRiskStatus(catProfile, answers, null, null)
+      const risk = computeRiskStatus(activeCat, answers, null, null)
       setRiskStatus(risk)
-      setOnboardingCompleted(true)
       router.push("/")
     }
   }
@@ -102,7 +104,7 @@ export default function QuestionsPage() {
             </div>
             <div>
               <h1 className="text-lg font-bold text-foreground">몇 가지만 더 물어볼게요</h1>
-              <p className="text-xs text-muted-foreground">2단계 / 최대 3단계</p>
+              <p className="text-xs text-muted-foreground">맞춤 설문</p>
             </div>
           </div>
           <p className="text-sm text-muted-foreground">기본정보를 바탕으로, 우리 아이에게 중요한 신호만 골랐어요.</p>

@@ -1,7 +1,12 @@
 // 고양이 프로필 타입
 export interface CatProfile {
   // 필수
+  id?: string
   name: string
+  adoptionPath: string
+  adoptionAgencyCode?: string
+  careShareStartAt?: number
+  careShareEndAt?: number
   birthDate?: string // ISO string
   estimatedAge?: number // 개월 수
   unknownBirthday: boolean
@@ -28,6 +33,7 @@ export interface CatProfile {
   profilePhoto?: string
 }
 
+
 export type MedicalCondition =
   | "kidney"
   | "urinary"
@@ -39,6 +45,8 @@ export type MedicalCondition =
   | "joint"
   | "heart"
   | "unknown"
+
+export type ShareLevel = "signal" | "summary" | "full"
 
 // 질문 타입
 export interface Question {

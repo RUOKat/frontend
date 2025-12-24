@@ -4,16 +4,18 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { loadDailyRecords } from "@/lib/storage"
 import type { DailyRecord } from "@/lib/types"
+import { useActiveCat } from "@/contexts/active-cat-context"
 import { Calendar, ChevronRight, TrendingUp } from "lucide-react"
 import { useEffect, useState } from "react"
 
 export default function HistoryPage() {
+  const { activeCatId } = useActiveCat()
   const [records, setRecords] = useState<DailyRecord[]>([])
 
   useEffect(() => {
-    const loaded = loadDailyRecords<DailyRecord>()
+    const loaded = loadDailyRecords<DailyRecord>(activeCatId ?? undefined)
     setRecords(loaded)
-  }, [])
+  }, [activeCatId])
 
   const today = new Date().toISOString().split("T")[0]
 

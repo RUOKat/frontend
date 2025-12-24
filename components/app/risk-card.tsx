@@ -35,24 +35,20 @@ export function RiskCard({ riskStatus, catName = "고양이" }: RiskCardProps) {
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">{riskStatus.summary}</p>
 
-        <p className="text-xs text-muted-foreground/80 italic">* 진단이 아닌 참고용이에요.</p>
+        <p className="text-xs text-muted-foreground/80 italic">* 판단이 아닌 참고용이에요.</p>
 
         <div className="pt-2">
-          {riskStatus.level === "normal" ? (
-            <Button asChild className="w-full" size="sm">
-              <Link href="/record/new">
-                기록 시작하기
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Link>
-            </Button>
-          ) : (
-            <Button asChild variant="outline" className="w-full bg-transparent" size="sm">
-              <Link href="/monitoring">
-                왜 이렇게 판단했나요?
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Link>
-            </Button>
-          )}
+          <Button
+            asChild
+            variant={riskStatus.level === "normal" ? "default" : "outline"}
+            className={riskStatus.level === "normal" ? "w-full" : "w-full bg-transparent"}
+            size="sm"
+          >
+            <Link href="/monitoring">
+              {riskStatus.level === "normal" ? "모니터링 보기" : "왜 이렇게 판단했나요?"}
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Link>
+          </Button>
         </div>
       </CardContent>
     </Card>
