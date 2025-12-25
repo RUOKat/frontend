@@ -10,7 +10,6 @@ import { useAuth } from "@/contexts/auth-context"
 import { CatSelector } from "@/components/app/cat-selector"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
-import { saveNewCatMode } from "@/lib/storage"
 import {
   Bell,
   Camera,
@@ -52,25 +51,34 @@ export default function SettingsPage() {
   const loginMethodLabel = user?.email ? "이메일" : "데모"
 
   const adoptionPathLabel = activeCat?.adoptionPath?.toLowerCase() ?? ""
-  const hasAgencyCode = Boolean(activeCat?.adoptionAgencyCode?.trim())
+  const adoptionSource = activeCat?.adoptionSource
+  const hasAgencyCode = Boolean(activeCat?.agencyCode?.trim() || activeCat?.adoptionAgencyCode?.trim())
   const isAgencyAdoption =
-    hasAgencyCode &&
-    (adoptionPathLabel.includes("보호소") ||
-      adoptionPathLabel.includes("입양기관") ||
-      adoptionPathLabel.includes("agency") ||
-      adoptionPathLabel.includes("shelter"))
+    adoptionSource === "shelter" ||
+    adoptionSource === "agency" ||
+    (hasAgencyCode &&
+      (adoptionPathLabel.includes("보호소") ||
+        adoptionPathLabel.includes("입양기관") ||
+        adoptionPathLabel.includes("agency") ||
+        adoptionPathLabel.includes("shelter")))
 
   const careShareStartAt = activeCat?.careShareStartAt
-  const careShareEndAt = activeCat?.careShareEndAt
+  const careShareEndAt =
+    activeCat?.dataSharing?.expiresAt ? new Date(activeCat.dataSharing.expiresAt).getTime() : activeCat?.careShareEndAt
   const now = Date.now()
   const isSharePeriodExpired = typeof careShareEndAt === "number" && careShareEndAt < now
-  const shareActive = (isAgencyAdoption && !isSharePeriodExpired) || shelterShareOptIn
+  const shareActive =
+    activeCat?.dataSharing?.enabled != null
+      ? activeCat.dataSharing.enabled && !isSharePeriodExpired
+      : (isAgencyAdoption && !isSharePeriodExpired) || shelterShareOptIn
   const shareStatusLabel = isSharePeriodExpired ? "종료됨" : shareActive ? "공유 중" : "선택 안 함"
   const shareRangeLabel = shareActive ? shareLevelLabel[shareLevel] : "미설정"
   const carePeriodLabel =
     isAgencyAdoption && careShareStartAt && careShareEndAt
       ? `${formatDate(careShareStartAt)} ~ ${formatDate(careShareEndAt)}`
-      : "기본 제공"
+      : isAgencyAdoption
+        ? "1년 공동 케어"
+        : "기본 제공"
 
   const catManagementItems = [
     {
@@ -83,8 +91,7 @@ export default function SettingsPage() {
       icon: PlusCircle,
       label: "고양이 추가/전환",
       description: "멀티캣 기능 준비 중",
-      href: "/onboarding/cat",
-      onClick: () => saveNewCatMode(true),
+      href: "/onboarding/cat?mode=new",
     },
   ]
 

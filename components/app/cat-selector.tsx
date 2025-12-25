@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useActiveCat } from "@/contexts/active-cat-context"
-import { saveNewCatMode } from "@/lib/storage"
 import { Cat, Check, ChevronDown, PlusCircle } from "lucide-react"
 
 function getAgeLabel({
@@ -57,9 +56,8 @@ export function CatSelector() {
   }
 
   const handleAddCat = () => {
-    saveNewCatMode(true)
     setOpen(false)
-    router.push("/onboarding/cat")
+    router.push("/onboarding/cat?mode=new")
   }
 
   if (isLoading) {

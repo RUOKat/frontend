@@ -6,17 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { CheckinPopup } from "@/components/app/checkin-popup"
-import { RiskCard } from "@/components/app/risk-card"
 import { CatSelector } from "@/components/app/cat-selector"
 import { useActiveCat } from "@/contexts/active-cat-context"
-import { useOnboarding } from "@/contexts/onboarding-context"
 import { getMonthlyCareForDate, type MonthlyCareRecord } from "@/lib/care-monthly"
 import { Calendar, Gift, MessageCircle, ExternalLink, Bell } from "lucide-react"
 import { useEffect, useState } from "react"
 
 export default function HomePage() {
   const { activeCat, activeCatId } = useActiveCat()
-  const { riskStatus } = useOnboarding()
   const [monthlyCare, setMonthlyCare] = useState<MonthlyCareRecord>({
     completedDays: [],
     streak: 0,
@@ -132,17 +129,17 @@ export default function HomePage() {
             <div className="min-w-0 flex-1 space-y-2">
               <p className="text-sm opacity-80">{today}</p>
               <h1 className="text-xl font-bold mt-1 leading-relaxed">
-                안녕하세요, <span className="text-primary-foreground/90">{activeCat?.name || "고양이"}</span> 집사님!{" "}
-                <button
-                  type="button"
-                  onClick={() => setTipOpen(true)}
-                  className="inline font-semibold underline underline-offset-4 decoration-primary-foreground/60 hover:decoration-primary-foreground hover:text-primary-foreground/90 transition"
-                  aria-haspopup="dialog"
-                  aria-expanded={tipOpen}
-                >
-                  {todayCatTip.question}
-                </button>
+                안녕하세요, <span className="text-primary-foreground/90">{activeCat?.name || "고양이"}</span> 집사님!
               </h1>
+              <button
+                type="button"
+                onClick={() => setTipOpen(true)}
+                className="mt-1 text-sm font-semibold underline underline-offset-4 decoration-primary-foreground/60 hover:decoration-primary-foreground hover:text-primary-foreground/90 transition text-left"
+                aria-haspopup="dialog"
+                aria-expanded={tipOpen}
+              >
+                {todayCatTip.question}
+              </button>
             </div>
             <button
               type="button"
@@ -167,9 +164,6 @@ export default function HomePage() {
       <main className="px-6 -mt-4 pb-6 space-y-4">
         {/* 프로필 요약 */}
         <CatSelector />
-
-        {/* 이상 신호 카드 */}
-        {riskStatus && <RiskCard riskStatus={riskStatus} catName={activeCat?.name} />}
 
         {/* 월간 케어 참여 기록 */}
         <Card>

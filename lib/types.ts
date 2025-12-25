@@ -1,10 +1,21 @@
 // 고양이 프로필 타입
+export type AdoptionSource = "shelter" | "agency" | "private" | "rescue" | "other"
+
+export type DataSharing = {
+  enabled: boolean
+  required: boolean
+  expiresAt: string | null
+}
+
 export interface CatProfile {
   // 필수
   id?: string
   name: string
   adoptionPath: string
+  adoptionSource?: AdoptionSource
   adoptionAgencyCode?: string
+  agencyCode?: string
+  dataSharing?: DataSharing
   careShareStartAt?: number
   careShareEndAt?: number
   birthDate?: string // ISO string

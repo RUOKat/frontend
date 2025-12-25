@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, type ChangeEvent } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,8 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { catBreeds } from "@/lib/mock"
-import { clearNewCatMode, loadNewCatMode } from "@/lib/storage"
-import type { CatProfile, MedicalCondition } from "@/lib/types"
+import type { AdoptionSource, CatProfile, MedicalCondition } from "@/lib/types"
 import { Cat, ChevronDown, ChevronUp, ArrowRight } from "lucide-react"
 
 const medicalConditions: { value: MedicalCondition; label: string }[] = [
@@ -28,6 +27,14 @@ const medicalConditions: { value: MedicalCondition; label: string }[] = [
 ]
 
 const adoptionPaths = ["보호소/입양기관", "지인/가족", "길에서 구조", "기타"]
+const agencyAdoptionPath = adoptionPaths[0]
+
+function resolveAdoptionSource(path: string): AdoptionSource {
+  if (path === adoptionPaths[0]) return "shelter"
+  if (path === adoptionPaths[1]) return "private"
+  if (path === adoptionPaths[2]) return "rescue"
+  return "other"
+}
 
 function createCatId(): string {
   const cryptoObj = typeof globalThis !== "undefined" ? globalThis.crypto : undefined
@@ -42,7 +49,8 @@ export default function CatProfilePage() {
   const [showOptional, setShowOptional] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null)
-  const [isNewCatMode, setIsNewCatMode] = useState(false)
+  const searchParams = useSearchParams()
+  const isNewCatMode = searchParams.get("mode") === "new"
 
   // 필수 필드
   const [name, setName] = useState("")
@@ -73,7 +81,7 @@ export default function CatProfilePage() {
   const [notes, setNotes] = useState("")
   const [vetInfo, setVetInfo] = useState("")
 
-  const isAgencyAdoption = adoptionPath === "보호소/입양기관"
+  const isAgencyAdoption = adoptionPath === agencyAdoptionPath
   const trimmedAgencyCode = adoptionAgencyCode.trim()
   const isAgencyCodeValid = !isAgencyAdoption || trimmedAgencyCode.length >= 4
   const showAgencyCodeError = isAgencyAdoption && trimmedAgencyCode.length < 4
@@ -95,14 +103,6 @@ export default function CatProfilePage() {
       setAdoptionAgencyCode("")
     }
   }, [isAgencyAdoption])
-
-  useEffect(() => {
-    const isNew = loadNewCatMode()
-    setIsNewCatMode(isNew)
-    if (isNew) {
-      clearNewCatMode()
-    }
-  }, [])
 
   const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -135,7 +135,9 @@ export default function CatProfilePage() {
       id: nextId,
       name: name.trim(),
       adoptionPath: adoptionPath === "기타" ? customAdoptionPath.trim() : adoptionPath,
+      adoptionSource: resolveAdoptionSource(adoptionPath),
       adoptionAgencyCode: isAgencyAdoption ? trimmedAgencyCode : undefined,
+      agencyCode: isAgencyAdoption ? trimmedAgencyCode : undefined,
       unknownBirthday,
       birthDate: unknownBirthday ? undefined : birthDate,
       estimatedAge: unknownBirthday ? Number.parseInt(estimatedAge, 10) : undefined,
