@@ -215,8 +215,12 @@ export default function HomePage() {
 
       {/* 메인 */}
       <main className="px-6 -mt-4 pb-6 space-y-4">
-        {/* 프로필 요약 */}
-        <CatSelector />
+        {/* 고양이 정보 */}
+        <Card className="py-3">
+          <CardContent className="py-2">
+            <CatSelector embedded primaryAction="edit" />
+          </CardContent>
+        </Card>
 
         {/* 월간 케어 참여 기록 */}
         <Card>

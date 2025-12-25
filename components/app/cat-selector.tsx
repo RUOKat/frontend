@@ -45,7 +45,12 @@ function isAgencyAdoption(cat: CatProfile): boolean {
   )
 }
 
-export function CatSelector() {
+type CatSelectorProps = {
+  embedded?: boolean
+  primaryAction?: "select" | "edit"
+}
+
+export function CatSelector({ embedded = false, primaryAction = "select" }: CatSelectorProps) {
   const router = useRouter()
   const { cats, activeCat, activeCatId, setActiveCatId, isLoading } = useActiveCat()
   const [open, setOpen] = useState(false)
@@ -63,9 +68,37 @@ export function CatSelector() {
     return parts.join(" · ")
   }, [activeCat])
 
+  const ageLabel = useMemo(() => {
+    if (!activeCat) return ""
+    return getAgeLabel({
+      birthDate: activeCat.birthDate,
+      estimatedAge: activeCat.estimatedAge,
+      unknownBirthday: activeCat.unknownBirthday,
+    })
+  }, [activeCat])
+
+  const extraLine = useMemo(() => {
+    if (!activeCat) return ""
+    const parts = [
+      ageLabel ? `나이 ${ageLabel}` : null,
+      activeCat.weight ? `체중 ${activeCat.weight}kg` : null,
+    ].filter(Boolean)
+    return parts.join(" · ")
+  }, [activeCat, ageLabel])
+
   const handleSelect = (catId: string) => {
     setActiveCatId(catId)
     setOpen(false)
+  }
+
+  const handlePrimaryClick = () => {
+    if (primaryAction === "edit") {
+      router.push("/onboarding/cat")
+      return
+    }
+    if (canOpen) {
+      setOpen(true)
+    }
   }
 
   const handleAddCat = () => {
@@ -73,16 +106,24 @@ export function CatSelector() {
     router.push("/onboarding/cat?mode=new")
   }
 
+  const headerClassName = embedded ? "px-0 pb-0 gap-1" : "pb-3"
+  const contentClassName = embedded ? "px-0 mt-6" : ""
+  const rowClassName = embedded
+    ? "flex-1 min-w-0 flex items-center gap-2 text-left"
+    : "flex-1 min-w-0 flex items-center gap-4 text-left"
+  const avatarClassName =
+    "w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden"
+
   if (isLoading) {
-    return (
-      <Card>
-        <CardHeader className="pb-3">
+    const loadingContent = (
+      <>
+        <CardHeader className={headerClassName}>
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <Cat className="w-5 h-5 text-primary" />
             프로필
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className={contentClassName}>
           <div className="flex items-center gap-4">
             <Skeleton className="h-16 w-16 rounded-full" />
             <div className="flex-1 space-y-2">
@@ -92,29 +133,33 @@ export function CatSelector() {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </>
     )
+
+    return embedded ? <div className="space-y-0">{loadingContent}</div> : <Card>{loadingContent}</Card>
   }
 
-  return (
+  const selectorContent = (
     <>
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Cat className="w-5 h-5 text-primary" />
-            프로필
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <CardHeader className={headerClassName}>
+        <CardTitle className="text-2xl font-semibold flex items-center gap-2">
+          <Cat className="w-5 h-5 text-primary" />
+          {activeCat?.name || "고양이"}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className={contentClassName}>
+        <div className="w-full flex items-center gap-1">
           <button
             type="button"
-            onClick={() => canOpen && setOpen(true)}
-            className="w-full flex items-center gap-4 text-left"
-            aria-label={hasMultiple ? "고양이 선택" : "고양이 추가"}
-            title={hasMultiple ? "고양이 선택" : "고양이 추가"}
-            aria-disabled={!canOpen}
+            onClick={handlePrimaryClick}
+            className={rowClassName}
+            aria-label={
+              primaryAction === "edit" ? "고양이 프로필 보기/수정" : hasMultiple ? "고양이 선택" : "고양이 추가"
+            }
+            title={primaryAction === "edit" ? "고양이 프로필 보기/수정" : hasMultiple ? "고양이 선택" : "고양이 추가"}
+            aria-disabled={primaryAction === "select" && !canOpen}
           >
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+            <div className={avatarClassName}>
               {activeCat?.profilePhoto ? (
                 <img
                   src={activeCat.profilePhoto}
@@ -125,23 +170,41 @@ export function CatSelector() {
                 <Cat className="w-8 h-8 text-primary" />
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-foreground">{activeCat?.name || "고양이"}</h3>
-              {detailLine ? (
-                <p className="text-sm text-muted-foreground truncate">{detailLine}</p>
-              ) : (
-                <p className="text-sm text-muted-foreground">등록된 정보 없음</p>
-              )}
-              {activeCat?.weight ? <p className="text-sm text-muted-foreground">{activeCat.weight}kg</p> : null}
-            </div>
+          <div className="flex-1 min-w-0">
+            {detailLine ? (
+              <p className="text-sm font-medium text-foreground truncate">{detailLine}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">기본 정보 없음</p>
+            )}
+            {extraLine ? (
+              <p className="text-xs text-muted-foreground">{extraLine}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">나이/체중 정보 없음</p>
+            )}
+          </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => canOpen && setOpen(true)}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground hover:bg-muted/40 transition"
+            aria-label={hasMultiple ? "고양이 전환" : "고양이 추가"}
+            title={hasMultiple ? "고양이 전환" : "고양이 추가"}
+            aria-disabled={!canOpen}
+          >
             {hasMultiple ? (
               <ChevronDown className="w-5 h-5 text-muted-foreground" />
             ) : (
               <PlusCircle className="w-5 h-5 text-muted-foreground" />
             )}
           </button>
-        </CardContent>
-      </Card>
+        </div>
+      </CardContent>
+    </>
+  )
+
+  return (
+    <>
+      {embedded ? <div className="space-y-0">{selectorContent}</div> : <Card>{selectorContent}</Card>}
 
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerContent>

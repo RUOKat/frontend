@@ -8,7 +8,7 @@ import { StatusBadge } from "@/components/app/status-badge"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
 import { getMockOkatSummary, getMockWeeklyReports, type OkatSummary, type WeeklyReport } from "@/lib/okat-data"
-import { ChevronRight } from "lucide-react"
+import { Camera, ChevronRight, ClipboardList, FileText, Share2, ShieldCheck } from "lucide-react"
 
 function formatDateTime(value?: string | null) {
   if (!value) return "업데이트 없음"
@@ -34,6 +34,61 @@ export default function OkatDashboardPage() {
   const coverageLabel = summary
     ? `최근 ${summary.coverage.totalDays}일 중 ${summary.coverage.daysWithData}일 기록`
     : "최근 기록이 없어요"
+
+  const adoptionPathLabel = activeCat?.adoptionPath?.toLowerCase() ?? ""
+  const adoptionSource = activeCat?.adoptionSource
+  const hasAgencyCode = Boolean(activeCat?.agencyCode?.trim() || activeCat?.adoptionAgencyCode?.trim())
+  const isAgencyAdoption =
+    adoptionSource === "shelter" ||
+    adoptionSource === "agency" ||
+    (hasAgencyCode &&
+      (adoptionPathLabel.includes("보호소") ||
+        adoptionPathLabel.includes("입양기관") ||
+        adoptionPathLabel.includes("agency") ||
+        adoptionPathLabel.includes("shelter")))
+
+  const careShareStartAt = activeCat?.careShareStartAt
+  const careShareEndAt =
+    activeCat?.dataSharing?.expiresAt ? new Date(activeCat.dataSharing.expiresAt).getTime() : activeCat?.careShareEndAt
+  const now = Date.now()
+  const isSharePeriodExpired = typeof careShareEndAt === "number" && careShareEndAt < now
+  const shareActive =
+    activeCat?.dataSharing?.enabled != null
+      ? activeCat.dataSharing.enabled && !isSharePeriodExpired
+      : (isAgencyAdoption && !isSharePeriodExpired)
+  const shareStatusLabel = isSharePeriodExpired ? "종료됨" : shareActive ? "공유 중" : "선택 안 함"
+  const shareRangeLabel = activeCat?.dataSharing?.required
+    ? "상태 신호만"
+    : activeCat?.dataSharing?.enabled
+      ? "상태 요약"
+      : "미설정"
+  const carePeriodLabel =
+    isAgencyAdoption && careShareStartAt && careShareEndAt
+      ? `${formatDateTime(String(careShareStartAt))} ~ ${formatDateTime(String(careShareEndAt))}`
+      : isAgencyAdoption
+        ? "1년 공동 케어"
+        : "기본 제공"
+
+  const careItems = [
+    {
+      icon: ClipboardList,
+      label: "병원 방문 기록",
+      description: "방문 기록 정리",
+      href: "/vet-history",
+    },
+    {
+      icon: FileText,
+      label: "리포트",
+      description: "상태 요약 리포트",
+      href: "/report",
+    },
+    {
+      icon: Camera,
+      label: "웹캠 모니터링",
+      description: "실시간 관찰",
+      href: "/webcam",
+    },
+  ]
 
   return (
     <div className="min-h-screen bg-background">
@@ -166,6 +221,83 @@ export default function OkatDashboardPage() {
               ))}
             </div>
           )}
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-base font-semibold text-foreground">기록/도움</h2>
+          <div className="space-y-2">
+            {careItems.map((item) => (
+              <Link key={item.label} href={item.href}>
+                <Card className="hover:bg-muted/50 transition-colors">
+                  <CardContent className="py-3 px-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                          <item.icon className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{item.label}</p>
+                          <p className="text-xs text-muted-foreground">{item.description}</p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-base font-semibold text-foreground">케어 프로그램/기관 공유</h2>
+          <Card>
+            <CardContent className="py-4 space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                    <ShieldCheck className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {isAgencyAdoption ? "입양 초기 공동 케어" : "기본 케어 흐름"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {isAgencyAdoption
+                        ? "입양 초기 1년간 함께 케어하는 기간입니다."
+                        : "지속적인 체크인과 기록을 기본으로 제공합니다."}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs text-muted-foreground">{carePeriodLabel}</span>
+              </div>
+
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                    <Share2 className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">기관 공유 상태</p>
+                    <p className="text-xs text-muted-foreground">원하시면 공유 범위를 조절할 수 있어요.</p>
+                  </div>
+                </div>
+                <span className="text-sm text-foreground">{shareStatusLabel}</span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>공유 범위</span>
+                <span className="text-foreground">{shareRangeLabel}</span>
+              </div>
+
+              <Link
+                href="/onboarding/consent"
+                className="inline-flex h-9 w-full items-center justify-center rounded-md border border-border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted/50"
+              >
+                공유 설정 보기
+              </Link>
+            </CardContent>
+          </Card>
         </section>
       </main>
     </div>
