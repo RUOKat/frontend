@@ -104,6 +104,45 @@ export default function CatProfilePage() {
     }
   }, [isAgencyAdoption])
 
+  useEffect(() => {
+    if (isNewCatMode || !activeCat) return
+
+    const storedAdoptionPath = activeCat.adoptionPath ?? ""
+    const adoptionPathMatches = storedAdoptionPath && adoptionPaths.includes(storedAdoptionPath)
+    setAdoptionPath(adoptionPathMatches ? storedAdoptionPath : storedAdoptionPath ? "기타" : "")
+    setCustomAdoptionPath(adoptionPathMatches ? "" : storedAdoptionPath)
+
+    const storedBreed = activeCat.breed ?? ""
+    const breedMatches = storedBreed && catBreeds.includes(storedBreed)
+    setBreed(breedMatches ? storedBreed : storedBreed ? "기타" : "")
+    setCustomBreed(breedMatches ? "" : storedBreed)
+
+    const isUnknownBirthday = Boolean(activeCat.unknownBirthday)
+
+    setName(activeCat.name ?? "")
+    setAdoptionAgencyCode(activeCat.adoptionAgencyCode ?? activeCat.agencyCode ?? "")
+    setUnknownBirthday(isUnknownBirthday)
+    setBirthDate(isUnknownBirthday ? "" : activeCat.birthDate ?? "")
+    setEstimatedAge(isUnknownBirthday && activeCat.estimatedAge != null ? String(activeCat.estimatedAge) : "")
+    setGender(activeCat.gender ?? "")
+    setNeutered(activeCat.neutered ?? true)
+    setWeight(activeCat.weight != null ? String(activeCat.weight) : "")
+    setBcs(activeCat.bcs != null ? String(activeCat.bcs) : "")
+    setFoodType(activeCat.foodType ?? "")
+    setWaterSource(activeCat.waterSource ?? "")
+    setActivityLevel(activeCat.activityLevel ?? "")
+    setLivingEnvironment(activeCat.livingEnvironment ?? "")
+    setMultiCat(Boolean(activeCat.multiCat))
+    setCatCount(activeCat.catCount != null ? String(activeCat.catCount) : "")
+    setMealsPerDay(activeCat.mealsPerDay != null ? String(activeCat.mealsPerDay) : "")
+    setWaterIntakeTendency(activeCat.waterIntakeTendency ?? "")
+    setMedicalHistory(activeCat.medicalHistory ?? [])
+    setMedications(activeCat.medications ?? "")
+    setNotes(activeCat.notes ?? "")
+    setVetInfo(activeCat.vetInfo ?? "")
+    setProfilePhoto(activeCat.profilePhoto ?? null)
+  }, [activeCat, isNewCatMode])
+
   const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) {

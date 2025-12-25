@@ -85,14 +85,44 @@ export default function HomePage() {
   }
 
   const monthLabel = new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long" })
-  const completionRatePercent = Math.round(monthlyCare.completionRate * 100)
 
   const formatISODate = (year: number, monthIndex: number, day: number) =>
     `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
 
+  const stampImages = [
+    "/stamps/cat-stamp-1.png",
+    "/stamps/cat-stamp-2.png",
+    "/stamps/cat-stamp-3.png",
+    "/stamps/cat-stamp-4.png",
+    "/stamps/cat-stamp-5.png",
+    "/stamps/cat-stamp-6.png",
+  ]
+
+  const getStampIndex = (value: string) => {
+    let hash = 0
+    for (let i = 0; i < value.length; i += 1) {
+      hash = (hash << 5) - hash + value.charCodeAt(i)
+      hash |= 0
+    }
+    return Math.abs(hash) % stampImages.length
+  }
+
   const now = new Date()
   const year = now.getFullYear()
   const monthIndex = now.getMonth()
+  const surveyTargetDays = monthIndex === 11 ? new Set([2, 4, 9, 11, 16, 18, 23, 25]) : new Set<number>()
+  const surveyCompletedDays = monthIndex === 11 ? new Set([2, 4, 9, 16]) : new Set<number>()
+  const targetDays = surveyTargetDays.size > 0 ? surveyTargetDays.size : Math.max(1, now.getDate())
+  const completedSurveyDays =
+    surveyCompletedDays.size > 0 ? surveyCompletedDays.size : monthlyCare.completedDays.length
+  const completionRatePercent =
+    surveyTargetDays.size > 0
+      ? Math.round((completedSurveyDays / Math.max(1, targetDays)) * 100)
+      : Math.round(monthlyCare.completionRate * 100)
+  const needsSurveyToday =
+    surveyTargetDays.size > 0
+      ? surveyTargetDays.has(now.getDate()) && !surveyCompletedDays.has(now.getDate())
+      : false
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate()
   const firstDayIndex = new Date(year, monthIndex, 1).getDay()
   const totalCells = Math.ceil((firstDayIndex + daysInMonth) / 7) * 7
@@ -100,21 +130,44 @@ export default function HomePage() {
   const calendarCells = Array.from({ length: totalCells }, (_, index) => {
     const dayNumber = index - firstDayIndex + 1
     if (dayNumber < 1 || dayNumber > daysInMonth) {
-      return <div key={`empty-${index}`} className="h-7" />
+      return <div key={`empty-${index}`} className="aspect-square min-h-[32px]" />
     }
 
     const dateISO = formatISODate(year, monthIndex, dayNumber)
     const isCompleted = completedSet.has(dateISO)
+    const hasSurveyStamp = surveyCompletedDays.has(dayNumber)
+    const stampSrc = hasSurveyStamp ? stampImages[getStampIndex(dateISO)] : null
 
     return (
       <div
         key={dateISO}
-        className={`h-7 rounded-md border flex items-center justify-center text-[10px] ${
+        className={`relative isolate flex aspect-square min-h-[32px] items-center justify-center rounded-md border p-0.5 text-[10px] ${
           isCompleted ? "border-primary/30 bg-primary/10 text-primary" : "border-border/40 bg-muted/40 text-muted-foreground"
         }`}
       >
-        {dayNumber}
-        {isCompleted && <span className="ml-1">✓</span>}
+        {stampSrc ? (
+          <>
+            <span
+              className="absolute inset-0 flex items-center justify-center stamp-sparkle"
+              aria-hidden="true"
+            >
+              <img
+                src={stampSrc}
+                alt=""
+                className="h-full w-full object-contain mix-blend-multiply opacity-95"
+                loading="lazy"
+              />
+            </span>
+            <span className="absolute right-0.5 top-0.5 rounded bg-background/80 px-0.5 text-[8px] font-medium text-foreground">
+              {dayNumber}
+            </span>
+          </>
+        ) : (
+          <span className="flex items-center gap-0.5 font-medium">
+            {dayNumber}
+            {isCompleted && <span className="ml-1">✓</span>}
+          </span>
+        )}
       </div>
     )
   })
@@ -177,14 +230,12 @@ export default function HomePage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="grid grid-cols-2 gap-3 text-center">
               <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-xs text-muted-foreground mb-1">완료일</p>
-                <p className="text-lg font-semibold">{monthlyCare.completedDays.length}일</p>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-xs text-muted-foreground mb-1">연속 기록</p>
-                <p className="text-lg font-semibold">{monthlyCare.streak}일</p>
+                <p className="text-xs text-muted-foreground mb-1">진단일</p>
+                <p className="text-lg font-semibold">
+                  {completedSurveyDays}/{targetDays}
+                </p>
               </div>
               <div className="bg-muted/50 rounded-lg p-3">
                 <p className="text-xs text-muted-foreground mb-1">참여율</p>
@@ -192,26 +243,53 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-7 gap-1">{calendarCells}</div>
+            <div className="grid grid-cols-7 gap-1 px-2">{calendarCells}</div>
 
-            <Alert>
-              <Gift className="text-amber-600" />
-              <AlertTitle>케어 참여 혜택 안내</AlertTitle>
-              <AlertDescription>
-                <p>
-                  케어 프로그램에 꾸준히 참여하신 보호자분들께
-                  <br />
-                  입양기관 및 협력 병원과 함께
-                  <br />
-                  중성화 수술 할인, 간식 지원 등
-                  <br />
-                  실질적인 케어 혜택을 제공하고 있어요.
-                  <br />
-                  (혜택은 참여 조건에 따라 달라질 수 있어요.)
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  혜택은 ‘기관 공유 동의’의 대가가 아니라, 케어 참여(지속 체크인/기록)에 대한 지원입니다.
-                </p>
+            <Alert className="border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card/90 px-2 shadow-sm">
+              <AlertTitle className="flex items-center gap-2">
+                <Gift className="text-primary" />
+                케어 참여 혜택
+              </AlertTitle>
+              <AlertDescription className="w-full">
+                <div className="space-y-3">
+                  <div className="w-full rounded-xl border border-primary/20 bg-background/70 p-4">
+                    <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
+                      <span className="rounded-full border border-border bg-background/80 px-3 py-1">
+                        1월 혜택
+                      </span>
+                      <span className="rounded-full border border-border bg-secondary px-3 py-1">택 1</span>
+                      <span className="text-sm font-medium text-foreground/70">월간 케어 참여 80% 이상 하시면!</span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-7 gap-1">
+                      <div className="col-span-7 rounded-lg border border-border/70 bg-card/80 p-4 shadow-sm sm:col-span-4">
+                        <div className="flex items-center gap-2 text-base font-semibold text-foreground">
+                          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-primary/30 bg-primary/20 text-sm">
+                            A
+                          </span>
+                          <span>프리미엄 키튼 사료</span>
+                        </div>
+                        <p className="mt-2 text-sm font-semibold text-foreground">로얄캐닌 캣 마더 앤 베이비캣 2kg 증정</p>
+                        <p className="mt-1 text-xs text-muted-foreground">초기 성장 케어용 포뮬러</p>
+                      </div>
+                      <div className="col-span-7 rounded-lg border border-border/70 bg-card/80 p-4 shadow-sm sm:col-span-3">
+                        <div className="flex items-center gap-2 text-base font-semibold text-foreground">
+                          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-primary/30 bg-primary/20 text-sm">
+                            B
+                          </span>
+                          <span>기능성 키튼 사료</span>
+                        </div>
+                        <p className="mt-2 text-sm font-semibold text-foreground">
+                          힐스 사이언스 다이어트 고양이 치킨 레시피 기능성 사료 키튼 1.58kg 증정
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">균형 잡힌 성장 지원</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span className="rounded-full bg-secondary px-2 py-0.5 text-foreground">참여 리워드</span>
+                    <span>혜택은 케어 참여 기록에 대한 지원이며, 참여 조건 및 재고에 따라 변경될 수 있어요.</span>
+                  </div>
+                </div>
               </AlertDescription>
             </Alert>
           </CardContent>
@@ -221,12 +299,21 @@ export default function HomePage() {
 
       <Button
         asChild
-        className="fixed bottom-24 right-4 z-40 h-12 rounded-full px-5 shadow-lg"
+        className={`fixed bottom-24 right-4 z-40 h-12 rounded-full px-5 shadow-lg ${
+          needsSurveyToday ? "cta-nudge" : ""
+        }`}
         aria-label="진단 설문"
       >
         <Link href="/onboarding/questions">
-          <MessageCircle className="w-4 h-4 mr-2" />
-          진단 설문
+          <span className="relative inline-flex items-center">
+            <MessageCircle className="w-4 h-4 mr-2" />
+            진단 설문
+            {needsSurveyToday && (
+              <span className="cta-badge" aria-hidden="true">
+                !
+              </span>
+            )}
+          </span>
         </Link>
       </Button>
 
