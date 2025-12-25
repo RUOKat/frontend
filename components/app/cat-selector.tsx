@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useActiveCat } from "@/contexts/active-cat-context"
+import type { CatProfile } from "@/lib/types"
 import { Cat, Check, ChevronDown, PlusCircle } from "lucide-react"
 
 function getAgeLabel({
@@ -30,6 +31,18 @@ function getAgeLabel({
   if (months <= 0) return ""
   if (months < 12) return `${months}개월`
   return `${Math.floor(months / 12)}살`
+}
+
+function isAgencyAdoption(cat: CatProfile): boolean {
+  const adoptionPath = cat.adoptionPath?.toLowerCase() ?? ""
+  return (
+    cat.adoptionSource === "shelter" ||
+    cat.adoptionSource === "agency" ||
+    adoptionPath.includes("보호소") ||
+    adoptionPath.includes("입양기관") ||
+    adoptionPath.includes("agency") ||
+    adoptionPath.includes("shelter")
+  )
 }
 
 export function CatSelector() {
@@ -149,13 +162,16 @@ export function CatSelector() {
               ]
                 .filter(Boolean)
                 .join(" · ")
+              const backgroundClass = isAgencyAdoption(cat)
+                ? "bg-sky-50 dark:bg-sky-950/40"
+                : "bg-emerald-50 dark:bg-emerald-950/40"
 
               return (
                 <button
                   key={cat.id}
                   type="button"
                   onClick={() => handleSelect(cat.id)}
-                  className="w-full flex items-center gap-3 rounded-lg border border-border px-3 py-2 text-left hover:bg-muted/50 transition"
+                  className={`w-full flex items-center gap-3 rounded-lg border border-border px-3 py-2 text-left hover:bg-muted/50 transition ${backgroundClass}`}
                 >
                   <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden">
                     {cat.profilePhoto ? (
