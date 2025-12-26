@@ -11,8 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { catBreeds } from "@/lib/mock"
-import type { AdoptionSource, CatProfile, MedicalCondition } from "@/lib/types"
-import { Cat, ChevronDown, ChevronUp, ArrowRight } from "lucide-react"
+import type { AdoptionSource, CatProfile, MedicalCondition, MedicationSelection, Weekday } from "@/lib/types"
+import { Cat, ChevronDown, ChevronUp, ArrowRight, X } from "lucide-react"
 
 const medicalConditions: { value: MedicalCondition; label: string }[] = [
   { value: "kidney", label: "신장/요로" },
@@ -28,6 +28,86 @@ const medicalConditions: { value: MedicalCondition; label: string }[] = [
 
 const adoptionPaths = ["보호소/입양기관", "지인/가족", "길에서 구조", "기타"]
 const agencyAdoptionPath = adoptionPaths[0]
+const surveyFrequencyOptions = [2, 3, 4, 5, 6, 7]
+const weekDays: { value: Weekday; label: string }[] = [
+  { value: "mon", label: "월" },
+  { value: "tue", label: "화" },
+  { value: "wed", label: "수" },
+  { value: "thu", label: "목" },
+  { value: "fri", label: "금" },
+  { value: "sat", label: "토" },
+  { value: "sun", label: "일" },
+]
+const weekDayOrder = weekDays.map((day) => day.value)
+
+const medicationRecommendationMap: Partial<Record<MedicalCondition, string[]>> = {
+  kidney: ["인결합제", "수액(피하수액)", "구토억제제", "식욕촉진제", "요로 처방식", "오메가3"],
+  urinary: ["인결합제", "수액(피하수액)", "구토억제제", "식욕촉진제", "요로 처방식", "오메가3"],
+  ckd: ["인결합제", "수액(피하수액)", "구토억제제", "식욕촉진제", "요로 처방식", "오메가3"],
+  diabetes: ["인슐린", "혈당측정", "당뇨 처방식"],
+  thyroid: ["메티마졸(항갑상선제)"],
+  joint: ["관절영양제", "진통제(수의사 처방)"],
+  heart: ["이뇨제(수의사 처방)", "심장약(수의사 처방)"],
+  dental: ["항생제(수의사 처방)", "소염제(수의사 처방)"],
+  skin: ["항생제(수의사 처방)", "소염제(수의사 처방)"],
+}
+
+const medicationCatalog = [
+  "인결합제",
+  "수액(피하수액)",
+  "구토억제제",
+  "식욕촉진제",
+  "요로 처방식",
+  "오메가3",
+  "인슐린",
+  "혈당측정",
+  "당뇨 처방식",
+  "메티마졸(항갑상선제)",
+  "관절영양제",
+  "진통제(수의사 처방)",
+  "이뇨제(수의사 처방)",
+  "심장약(수의사 처방)",
+  "항생제(수의사 처방)",
+  "소염제(수의사 처방)",
+  "위장보호제",
+  "항구토제",
+  "간 보호제",
+  "간 처방식",
+  "프로바이오틱스",
+  "유산균",
+  "스테로이드(수의사 처방)",
+  "항히스타민제",
+  "피부 보습제",
+  "안약",
+  "귀약",
+  "구강 세정제",
+  "치석 제거 보조제",
+  "혈압약(수의사 처방)",
+  "심장 영양제",
+  "칼륨 보충제",
+  "비타민 B군",
+  "철분 보충제",
+  "변비약",
+  "설사약",
+  "구충제",
+  "기생충 예방약",
+  "항산화제",
+  "면역 보조제",
+  "장 보호제",
+  "진정제(수의사 처방)",
+  "항경련제(수의사 처방)",
+  "눈물 관리제",
+  "요로 영양제",
+  "신장 처방식",
+  "치과 처방식",
+  "피부 처방식",
+  "알레르기 처방식",
+  "항곰팡이제(수의사 처방)",
+]
+
+const medicationCatalogUnique = Array.from(new Set(medicationCatalog))
+
+const createMedicationId = (label: string) => label.trim().toLowerCase().replace(/\s+/g, "-")
 
 function resolveAdoptionSource(path: string): AdoptionSource {
   if (path === adoptionPaths[0]) return "shelter"
@@ -65,9 +145,10 @@ export default function CatProfilePage() {
   const [breed, setBreed] = useState("")
   const [customBreed, setCustomBreed] = useState("")
   const [weight, setWeight] = useState("")
-  const [bcs, setBcs] = useState<string>("")
   const [foodType, setFoodType] = useState<"dry" | "wet" | "mixed" | "prescription" | "">("")
   const [waterSource, setWaterSource] = useState<"fountain" | "bowl" | "mixed" | "">("")
+  const [surveyFrequency, setSurveyFrequency] = useState("")
+  const [surveyDays, setSurveyDays] = useState<Weekday[]>([])
 
   // 선택 필드
   const [activityLevel, setActivityLevel] = useState<"low" | "medium" | "high" | "">("")
@@ -77,7 +158,8 @@ export default function CatProfilePage() {
   const [mealsPerDay, setMealsPerDay] = useState("")
   const [waterIntakeTendency, setWaterIntakeTendency] = useState<"low" | "normal" | "high" | "unknown" | "">("")
   const [medicalHistory, setMedicalHistory] = useState<MedicalCondition[]>([])
-  const [medications, setMedications] = useState("")
+  const [medicationsSelected, setMedicationsSelected] = useState<MedicationSelection[]>([])
+  const [medicationSearchQuery, setMedicationSearchQuery] = useState("")
   const [notes, setNotes] = useState("")
   const [vetInfo, setVetInfo] = useState("")
 
@@ -87,6 +169,9 @@ export default function CatProfilePage() {
   const showAgencyCodeError = isAgencyAdoption && trimmedAgencyCode.length < 4
 
   const hasAdoptionPath = adoptionPath && (adoptionPath !== "기타" || customAdoptionPath.trim())
+  const surveyFrequencyValue = surveyFrequency ? Number.parseInt(surveyFrequency, 10) : 0
+  const isSurveyScheduleValid =
+    surveyFrequencyValue >= 2 && surveyFrequencyValue <= 7 && surveyDays.length === surveyFrequencyValue
   const isValid =
     name.trim() &&
     hasAdoptionPath &&
@@ -96,13 +181,76 @@ export default function CatProfilePage() {
     breed &&
     weight &&
     foodType &&
-    waterSource
+    waterSource &&
+    isSurveyScheduleValid
+
+  const recommendedMedications = medicalHistory.reduce<string[]>((acc, condition) => {
+    const candidates = medicationRecommendationMap[condition] ?? []
+    candidates.forEach((item) => {
+      if (!acc.includes(item)) acc.push(item)
+    })
+    return acc
+  }, [])
+  const selectedMedicationIds = new Set(medicationsSelected.map((item) => item.id))
+  const medicationQuery = medicationSearchQuery.trim()
+  const searchResults =
+    medicationQuery.length >= 2
+      ? medicationCatalogUnique
+          .filter((item) => item.toLowerCase().includes(medicationQuery.toLowerCase()))
+          .filter((item) => !selectedMedicationIds.has(createMedicationId(item)))
+          .slice(0, 8)
+      : []
+
+  const addMedicationSelection = (label: string, source: MedicationSelection["source"]) => {
+    const normalizedLabel = label.trim()
+    if (!normalizedLabel) return
+    const id = createMedicationId(normalizedLabel)
+    if (!id) return
+    setMedicationsSelected((prev) => {
+      if (prev.some((item) => item.id === id)) return prev
+      return [...prev, { id, label: normalizedLabel, source }]
+    })
+  }
+
+  const removeMedicationSelection = (id: string) => {
+    setMedicationsSelected((prev) => prev.filter((item) => item.id !== id))
+  }
+
+  const toggleRecommendedMedication = (label: string) => {
+    const normalizedLabel = label.trim()
+    if (!normalizedLabel) return
+    const id = createMedicationId(normalizedLabel)
+    if (!id) return
+    setMedicationsSelected((prev) => {
+      if (prev.some((item) => item.id === id)) {
+        return prev.filter((item) => item.id !== id)
+      }
+      return [...prev, { id, label: normalizedLabel, source: "recommended" }]
+    })
+  }
 
   useEffect(() => {
     if (!isAgencyAdoption) {
       setAdoptionAgencyCode("")
     }
   }, [isAgencyAdoption])
+
+  useEffect(() => {
+    if (!surveyFrequencyValue) {
+      setSurveyDays([])
+      return
+    }
+
+    if (surveyFrequencyValue === 7) {
+      setSurveyDays(weekDayOrder)
+      return
+    }
+
+    setSurveyDays((prev) => {
+      const normalized = weekDayOrder.filter((day) => prev.includes(day))
+      return normalized.slice(0, surveyFrequencyValue)
+    })
+  }, [surveyFrequencyValue])
 
   useEffect(() => {
     if (isNewCatMode || !activeCat) return
@@ -127,9 +275,12 @@ export default function CatProfilePage() {
     setGender(activeCat.gender ?? "")
     setNeutered(activeCat.neutered ?? true)
     setWeight(activeCat.weight != null ? String(activeCat.weight) : "")
-    setBcs(activeCat.bcs != null ? String(activeCat.bcs) : "")
     setFoodType(activeCat.foodType ?? "")
     setWaterSource(activeCat.waterSource ?? "")
+    setSurveyFrequency(
+      activeCat.surveyFrequencyPerWeek != null ? String(activeCat.surveyFrequencyPerWeek) : ""
+    )
+    setSurveyDays(activeCat.surveyDays ?? [])
     setActivityLevel(activeCat.activityLevel ?? "")
     setLivingEnvironment(activeCat.livingEnvironment ?? "")
     setMultiCat(Boolean(activeCat.multiCat))
@@ -137,7 +288,9 @@ export default function CatProfilePage() {
     setMealsPerDay(activeCat.mealsPerDay != null ? String(activeCat.mealsPerDay) : "")
     setWaterIntakeTendency(activeCat.waterIntakeTendency ?? "")
     setMedicalHistory(activeCat.medicalHistory ?? [])
-    setMedications(activeCat.medications ?? "")
+    const storedMedicationsSelected = activeCat.medicationsSelected ?? []
+    setMedicationsSelected(storedMedicationsSelected)
+    setMedicationSearchQuery("")
     setNotes(activeCat.notes ?? "")
     setVetInfo(activeCat.vetInfo ?? "")
     setProfilePhoto(activeCat.profilePhoto ?? null)
@@ -159,6 +312,22 @@ export default function CatProfilePage() {
     reader.readAsDataURL(file)
   }
 
+  const toggleSurveyDay = (day: Weekday) => {
+    if (!surveyFrequencyValue || surveyFrequencyValue === 7) return
+
+    setSurveyDays((prev) => {
+      const isSelected = prev.includes(day)
+      if (isSelected) {
+        return prev.filter((item) => item !== day)
+      }
+      if (prev.length >= surveyFrequencyValue) {
+        return prev
+      }
+      const next = [...prev, day]
+      return weekDayOrder.filter((item) => next.includes(item))
+    })
+  }
+
   const toggleMedicalCondition = (condition: MedicalCondition) => {
     setMedicalHistory((prev) => (prev.includes(condition) ? prev.filter((c) => c !== condition) : [...prev, condition]))
   }
@@ -169,6 +338,17 @@ export default function CatProfilePage() {
     setIsSubmitting(true)
     const isCreating = isNewCatMode || cats.length === 0 || !activeCat
     const nextId = isCreating ? createCatId() : activeCat.id ?? activeCatId ?? createCatId()
+    const normalizedSelections = medicationsSelected.reduce<MedicationSelection[]>((acc, item) => {
+      const label = item.label.trim()
+      if (!label) return acc
+      const id = createMedicationId(label)
+      if (!id || acc.some((entry) => entry.id === id)) return acc
+      acc.push({ ...item, id, label })
+      return acc
+    }, [])
+    const medicationsSelectedValue = normalizedSelections
+    const legacyParts = medicationsSelectedValue.map((item) => item.label)
+    const medicationLegacy = Array.from(new Set(legacyParts.map((item) => item.trim()).filter(Boolean))).join(", ")
 
     const profile: CatProfile = {
       id: nextId,
@@ -184,9 +364,10 @@ export default function CatProfilePage() {
       neutered,
       breed: breed === "기타" ? customBreed : breed,
       weight: Number.parseFloat(weight),
-      bcs: bcs ? Number.parseInt(bcs, 10) : null,
       foodType: foodType as "dry" | "wet" | "mixed" | "prescription",
       waterSource: waterSource as "fountain" | "bowl" | "mixed",
+      surveyFrequencyPerWeek: surveyFrequencyValue || undefined,
+      surveyDays: surveyDays.length > 0 ? surveyDays : undefined,
       activityLevel: activityLevel as "low" | "medium" | "high" | undefined,
       livingEnvironment: livingEnvironment as "indoor" | "outdoor" | "both" | undefined,
       multiCat,
@@ -194,7 +375,10 @@ export default function CatProfilePage() {
       mealsPerDay: mealsPerDay ? Number.parseInt(mealsPerDay, 10) : undefined,
       waterIntakeTendency: waterIntakeTendency as "low" | "normal" | "high" | "unknown" | undefined,
       medicalHistory: medicalHistory.length > 0 ? medicalHistory : undefined,
-      medications: medications.trim() || undefined,
+      medications: medicationLegacy,
+      medicationText: "",
+      medicationsSelected: medicationsSelectedValue,
+      medicationOtherText: "",
       notes: notes.trim() || undefined,
       vetInfo: vetInfo.trim() || undefined,
       profilePhoto: profilePhoto || undefined,
@@ -408,24 +592,6 @@ export default function CatProfilePage() {
                 </div>
               </div>
 
-              {/* BCS */}
-              <div className="space-y-2">
-                <Label>BCS (체형 점수)</Label>
-                <Select value={bcs} onValueChange={setBcs}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="모름" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unknown">모름</SelectItem>
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-                      <SelectItem key={n} value={n.toString()}>
-                        {n} {n <= 3 ? "(마름)" : n <= 5 ? "(적정)" : n <= 7 ? "(과체중)" : "(비만)"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
               {/* 사료 타입 */}
               <div className="space-y-2">
                 <Label>사료 타입</Label>
@@ -471,6 +637,60 @@ export default function CatProfilePage() {
                     </Button>
                   ))}
                 </div>
+              </div>
+
+              {/* 진단 설문 일정 */}
+              <div className="space-y-2">
+                <Label>진단 설문 주간 횟수</Label>
+                <Select value={surveyFrequency} onValueChange={setSurveyFrequency}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="--선택--" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {surveyFrequencyOptions.map((count) => (
+                      <SelectItem key={count} value={count.toString()}>
+                        {count === 7 ? "매일" : `주 ${count}회`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">주간 횟수에 맞춰 원하는 요일을 선택해 주세요.</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>요일 선택</Label>
+                <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+                  {weekDays.map((day) => {
+                    const isSelected = surveyDays.includes(day.value)
+                    const isAtLimit = surveyDays.length >= surveyFrequencyValue
+                    const isDisabled = !surveyFrequencyValue || surveyFrequencyValue === 7 || (!isSelected && isAtLimit)
+
+                    return (
+                      <Button
+                        key={day.value}
+                        type="button"
+                        variant={isSelected ? "default" : "outline"}
+                        className={!isSelected ? "bg-transparent" : ""}
+                        onClick={() => toggleSurveyDay(day.value)}
+                        size="sm"
+                        disabled={isDisabled}
+                      >
+                        {day.label}
+                      </Button>
+                    )
+                  })}
+                </div>
+                {!surveyFrequencyValue ? (
+                  <p className="text-xs text-muted-foreground">먼저 주간 횟수를 선택해 주세요.</p>
+                ) : surveyDays.length === surveyFrequencyValue ? (
+                  <p className="text-xs text-muted-foreground">
+                    선택 {surveyDays.length}/{surveyFrequencyValue}
+                  </p>
+                ) : (
+                  <p className="text-xs text-destructive">
+                    주 {surveyFrequencyValue}회에 맞춰 요일을 {surveyFrequencyValue}개 선택해 주세요.
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -621,14 +841,87 @@ export default function CatProfilePage() {
                 </div>
 
                 {/* 복용 약/영양제 */}
-                <div className="space-y-2">
-                  <Label htmlFor="medications">복용 중인 약/영양제</Label>
-                  <Input
-                    id="medications"
-                    value={medications}
-                    onChange={(e) => setMedications(e.target.value)}
-                    placeholder="예: 유산균, 관절 영양제"
-                  />
+                <div className="space-y-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <Label htmlFor="medicationSearch">복용 중인 약/영양제</Label>
+                    <div className="w-full sm:max-w-[220px]">
+                      <Input
+                        id="medicationSearch"
+                        value={medicationSearchQuery}
+                        onChange={(e) => {
+                          setMedicationSearchQuery(e.target.value)
+                        }}
+                        placeholder="2글자 이상 입력"
+                      />
+                    </div>
+                  </div>
+
+                  {searchResults.length > 0 && (
+                    <div className="sm:ml-auto sm:max-w-[220px]">
+                      <div className="rounded-md border border-border bg-background p-2 shadow-sm">
+                        <div className="space-y-1">
+                          {searchResults.map((item) => (
+                            <button
+                              key={item}
+                              type="button"
+                              onClick={() => {
+                                addMedicationSelection(item, "search")
+                                setMedicationSearchQuery("")
+                              }}
+                              className="flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-sm hover:bg-muted/50"
+                            >
+                              <span>{item}</span>
+                              <span className="text-[10px] text-muted-foreground">추가</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    {recommendedMedications.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {recommendedMedications.map((item) => {
+                          const isSelected = selectedMedicationIds.has(createMedicationId(item))
+                          return (
+                            <Button
+                              key={item}
+                              type="button"
+                              variant={isSelected ? "default" : "outline"}
+                              className={!isSelected ? "bg-transparent" : ""}
+                              onClick={() => toggleRecommendedMedication(item)}
+                              size="sm"
+                            >
+                              {item}
+                            </Button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {medicationsSelected.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {medicationsSelected.map((item) => (
+                        <span
+                          key={item.id}
+                          className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-1 text-xs text-foreground"
+                        >
+                          {item.label}
+                          <button
+                            type="button"
+                            onClick={() => removeMedicationSelection(item.id)}
+                            className="text-muted-foreground hover:text-foreground"
+                            aria-label={`${item.label} 제거`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
                 </div>
 
                 {/* 메모 */}

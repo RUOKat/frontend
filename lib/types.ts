@@ -1,6 +1,16 @@
 // 고양이 프로필 타입
 export type AdoptionSource = "shelter" | "agency" | "private" | "rescue" | "other"
 
+export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun"
+
+export type MedicationSelectionSource = "recommended" | "search"
+
+export type MedicationSelection = {
+  id: string
+  label: string
+  source: MedicationSelectionSource
+}
+
 export type DataSharing = {
   enabled: boolean
   required: boolean
@@ -25,9 +35,11 @@ export interface CatProfile {
   neutered: boolean
   breed: string
   weight: number // kg
-  bcs: number | null // 1-9, null = 모름
+  bcs?: number | null // 1-9, null = 모름
   foodType: "dry" | "wet" | "mixed" | "prescription"
   waterSource: "fountain" | "bowl" | "mixed"
+  surveyFrequencyPerWeek?: number
+  surveyDays?: Weekday[]
 
   // 선택
   activityLevel?: "low" | "medium" | "high"
@@ -38,6 +50,9 @@ export interface CatProfile {
   waterIntakeTendency?: "low" | "normal" | "high" | "unknown"
   medicalHistory?: MedicalCondition[]
   medications?: string
+  medicationText?: string
+  medicationsSelected?: MedicationSelection[]
+  medicationOtherText?: string
   notes?: string
   vetInfo?: string
   notificationPreference?: "all" | "important" | "none"

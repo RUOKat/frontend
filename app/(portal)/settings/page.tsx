@@ -197,13 +197,15 @@ export default function SettingsPage() {
                   <User className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground">{user?.name || "집사님"}</p>
-                  <p className="text-sm text-muted-foreground">{user?.email || "demo@areyouokat.com"}</p>
+                  <p className="text-lg font-semibold text-foreground">{user?.name || "집사님"}</p>
+                  <p className="text-base text-muted-foreground">{user?.email || "demo@areyouokat.com"}</p>
                 </div>
               </div>
               <Sheet>
                 <SheetTrigger asChild>
-                  <Button variant="outline" size="sm">프로필 편집</Button>
+                  <Button variant="outline" size="default" className="text-base">
+                    프로필 편집
+                  </Button>
                 </SheetTrigger>
                 <SheetContent side="bottom" className="bg-card text-card-foreground">
                   <SheetHeader>
@@ -235,23 +237,19 @@ export default function SettingsPage() {
               </Sheet>
             </div>
 
-            <div className="grid gap-2 text-xs text-muted-foreground">
+            <div className="grid gap-2 text-sm text-muted-foreground">
               <div className="flex items-center justify-between">
                 <span>로그인 방식</span>
-                <span className="text-foreground">{loginMethodLabel}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>대표 고양이</span>
-                <span className="text-foreground">{activeCat?.name || "미설정"}</span>
+                <span className="text-foreground text-sm">{loginMethodLabel}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span>연결된 고양이</span>
-                <span className="text-foreground">{catCount}마리</span>
+                <span className="text-foreground text-sm">{catCount}마리</span>
               </div>
             </div>
 
             <div className="border-t border-border/60 pt-4 space-y-2">
-              <Button asChild variant="outline" className="w-full bg-transparent" size="lg">
+              <Button asChild variant="outline" className="w-full bg-transparent text-base" size="lg">
                 <Link href="/auth/sign-out">
                   <LogOut className="w-4 h-4 mr-2" />
                   로그아웃

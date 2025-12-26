@@ -110,20 +110,51 @@ export default function HomePage() {
   const now = new Date()
   const year = now.getFullYear()
   const monthIndex = now.getMonth()
-  const surveyTargetDays = monthIndex === 11 ? new Set([2, 4, 9, 11, 16, 18, 23, 25]) : new Set<number>()
-  const surveyCompletedDays = monthIndex === 11 ? new Set([2, 4, 9, 16]) : new Set<number>()
-  const targetDays = surveyTargetDays.size > 0 ? surveyTargetDays.size : Math.max(1, now.getDate())
-  const completedSurveyDays =
-    surveyCompletedDays.size > 0 ? surveyCompletedDays.size : monthlyCare.completedDays.length
-  const completionRatePercent =
-    surveyTargetDays.size > 0
-      ? Math.round((completedSurveyDays / Math.max(1, targetDays)) * 100)
-      : Math.round(monthlyCare.completionRate * 100)
-  const needsSurveyToday =
-    surveyTargetDays.size > 0
-      ? surveyTargetDays.has(now.getDate()) && !surveyCompletedDays.has(now.getDate())
-      : false
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate()
+  const weekDayIndexMap = {
+    sun: 0,
+    mon: 1,
+    tue: 2,
+    wed: 3,
+    thu: 4,
+    fri: 5,
+    sat: 6,
+  } as const
+  const scheduledDays = activeCat?.surveyDays ?? []
+  const scheduledDayIndexes = scheduledDays.map((day) => weekDayIndexMap[day])
+  const scheduledDaySet = new Set(scheduledDayIndexes)
+  const surveyTargetDays = new Set<number>()
+
+  if (scheduledDaySet.size > 0) {
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const dayIndex = new Date(year, monthIndex, day).getDay()
+      if (scheduledDaySet.has(dayIndex)) {
+        surveyTargetDays.add(day)
+      }
+    }
+  }
+
+  const surveyCompletedDays = new Set<number>()
+  if (scheduledDaySet.size > 0) {
+    monthlyCare.completedDays.forEach((dateISO) => {
+      const [dateYear, dateMonth, dateDay] = dateISO.split("-").map(Number)
+      if (dateYear !== year || dateMonth !== monthIndex + 1) return
+      const dayIndex = new Date(dateYear, dateMonth - 1, dateDay).getDay()
+      if (scheduledDaySet.has(dayIndex)) {
+        surveyCompletedDays.add(dateDay)
+      }
+    })
+  }
+
+  const hasSchedule = scheduledDaySet.size > 0
+  const targetDays = hasSchedule ? surveyTargetDays.size : Math.max(1, now.getDate())
+  const completedSurveyDays = hasSchedule ? surveyCompletedDays.size : monthlyCare.completedDays.length
+  const completionRatePercent = hasSchedule
+    ? Math.round((completedSurveyDays / Math.max(1, targetDays)) * 100)
+    : Math.round(monthlyCare.completionRate * 100)
+  const todayISO = formatISODate(year, monthIndex, now.getDate())
+  const needsSurveyToday =
+    hasSchedule && scheduledDaySet.has(now.getDay()) && !monthlyCare.completedDays.includes(todayISO)
   const firstDayIndex = new Date(year, monthIndex, 1).getDay()
   const totalCells = Math.ceil((firstDayIndex + daysInMonth) / 7) * 7
   const completedSet = new Set(monthlyCare.completedDays)
@@ -259,7 +290,7 @@ export default function HomePage() {
                   <div className="w-full rounded-xl border border-primary/20 bg-background/70 p-4">
                     <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
                       <span className="rounded-full border border-border bg-background/80 px-3 py-1">
-                        1월 혜택
+                        12월 혜택
                       </span>
                       <span className="rounded-full border border-border bg-secondary px-3 py-1">택 1</span>
                       <span className="text-sm font-medium text-foreground/70">월간 케어 참여 80% 이상 하시면!</span>
