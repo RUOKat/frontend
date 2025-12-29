@@ -1,9 +1,11 @@
 // Cognito 환경변수
 export const cognitoConfig = {
+  // ✅ domain은 https://...amazoncognito.com 형태를 권장 (https 포함)
   domain: process.env.NEXT_PUBLIC_COGNITO_DOMAIN || "",
   clientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || "",
   redirectSignIn: process.env.NEXT_PUBLIC_COGNITO_REDIRECT_SIGNIN || "",
-  redirectSignOut: process.env.NEXT_PUBLIC_COGNITO_REDIRECT_SIGNOUT || "",
+  redirectSignOut:
+    process.env.NEXT_PUBLIC_COGNITO_REDIRECT_SIGNOUT || "http://localhost:3000/auth/sign-in",
   scopes: process.env.NEXT_PUBLIC_COGNITO_SCOPES || "openid email profile",
 }
 
@@ -55,20 +57,39 @@ export function clearCodeVerifier(): void {
   sessionStorage.removeItem("pkce_code_verifier")
 }
 
+// ✅ state 저장/조회/삭제 (콜백 위조 방지용)
+export function getStoredOAuthState(): string | null {
+  if (typeof window === "undefined") return null
+  return sessionStorage.getItem("oauth_state")
+}
+
+export function clearOAuthState(): void {
+  if (typeof window === "undefined") return
+  sessionStorage.removeItem("oauth_state")
+}
+
 // Cognito Hosted UI 로그인 URL 생성
 export async function getCognitoLoginUrl(): Promise<string> {
   const { codeChallenge } = await generatePKCE()
+
+  // ✅ state 생성 + 저장 (callback에서 검증)
+  const state = generateRandomString(16)
+  if (typeof window !== "undefined") {
+    sessionStorage.setItem("oauth_state", state)
+  }
 
   const params = new URLSearchParams({
     response_type: "code",
     client_id: cognitoConfig.clientId,
     redirect_uri: cognitoConfig.redirectSignIn,
     scope: cognitoConfig.scopes,
+    state,
     code_challenge: codeChallenge,
     code_challenge_method: "S256",
   })
 
-  return `https://${cognitoConfig.domain}/oauth2/authorize?${params.toString()}`
+  // ✅ domain에 https://가 포함되어 있다는 전제 (https:// 중복 방지)
+  return `${cognitoConfig.domain}/login?${params.toString()}`
 }
 
 // Cognito 로그아웃 URL 생성
@@ -78,7 +99,8 @@ export function getCognitoLogoutUrl(): string {
     logout_uri: cognitoConfig.redirectSignOut,
   })
 
-  return `https://${cognitoConfig.domain}/logout?${params.toString()}`
+  // ✅ domain에 https://가 포함되어 있다는 전제
+  return `${cognitoConfig.domain}/logout?${params.toString()}`
 }
 
 // Authorization Code를 토큰으로 교환
@@ -92,7 +114,8 @@ export async function exchangeCodeForTokens(
   }
 
   try {
-    const response = await fetch(`https://${cognitoConfig.domain}/oauth2/token`, {
+    // ✅ domain에 https://가 포함되어 있다는 전제
+    const response = await fetch(`${cognitoConfig.domain}/oauth2/token`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -113,6 +136,7 @@ export async function exchangeCodeForTokens(
 
     const data = await response.json()
     clearCodeVerifier()
+    // state는 callback에서 검증 끝나고 지우는 걸 권장 (callback 구현에서 clearOAuthState 호출)
 
     return {
       accessToken: data.access_token,

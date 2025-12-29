@@ -1,116 +1,105 @@
 "use client"
 
-import { useEffect, useState, Suspense } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useAuth } from "@/contexts/auth-context"
-import { useOnboarding } from "@/contexts/onboarding-context"
-import { exchangeCodeForTokens, parseIdToken } from "@/lib/cognito"
-import { loadCatProfile, loadCats } from "@/lib/storage"
-import type { CatProfile } from "@/lib/types"
-import { Loader2, AlertCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
+import { exchangeCodeForTokens } from "@/lib/cognito"
 
-function CallbackContent() {
+export default function CallbackPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const { login } = useAuth()
-  const { onboardingCompleted } = useOnboarding()
-  const [error, setError] = useState<string | null>(null)
+  const sp = useSearchParams()
+
+  const code = useMemo(() => sp.get("code"), [sp])
+  const error = useMemo(() => sp.get("error"), [sp])
+  const errorDescription = useMemo(() => sp.get("error_description"), [sp])
+
+  const ranRef = useRef(false)
+  const [status, setStatus] = useState<"idle" | "exchanging" | "success" | "error">("idle")
+  const [message, setMessage] = useState<string>("")
 
   useEffect(() => {
-    const code = searchParams.get("code")
-    const errorParam = searchParams.get("error")
+    // dev(StrictMode)에서 useEffect 2번 실행 방지
+    if (ranRef.current) return
+    ranRef.current = true
 
-    if (errorParam) {
-      setError(`인증 오류: ${errorParam}`)
+    // Cognito가 error로 돌려준 경우
+    if (error) {
+      setStatus("error")
+      setMessage(`인증 오류: ${error}${errorDescription ? ` (${decodeURIComponent(errorDescription)})` : ""}`)
       return
     }
 
     if (!code) {
-      setError("인증 코드가 없습니다.")
+      setStatus("error")
+      setMessage("인증 코드(code)가 없습니다. 다시 로그인 해주세요.")
       return
     }
 
-    const handleCallback = async () => {
-      try {
-        const tokens = await exchangeCodeForTokens(code)
-
-        if (!tokens) {
-          setError("토큰 교환에 실패했습니다.")
-          return
-        }
-
-        const userInfo = parseIdToken(tokens.idToken)
-
-        if (!userInfo) {
-          setError("사용자 정보를 가져올 수 없습니다.")
-          return
-        }
-
-        // 로그인 처리
-        login(
-          {
-            id: userInfo.sub,
-            email: userInfo.email,
-            name: userInfo.name,
-          },
-          tokens,
-        )
-
-        // 온보딩 상태에 따라 라우팅
-        const storedCats = loadCats<CatProfile>()
-        const hasCats = storedCats.length > 0 || Boolean(loadCatProfile<CatProfile>())
-        if (!hasCats) {
-          router.replace("/onboarding/cat")
-        } else if (!onboardingCompleted) {
-          router.replace("/onboarding/consent")
-        } else {
-          router.replace("/")
-        }
-      } catch (err) {
-        console.error("Callback error:", err)
-        setError("로그인 처리 중 오류가 발생했습니다.")
-      }
+    // 같은 code로 중복 교환 방지 (code는 1회용)
+    const usedKey = `oauth_code_used:${code}`
+    if (typeof window !== "undefined" && sessionStorage.getItem(usedKey)) {
+      setStatus("error")
+      setMessage("이미 처리된 로그인 요청입니다. 다시 로그인 해주세요.")
+      return
+    }
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(usedKey, "1")
     }
 
-    handleCallback()
-  }, [searchParams, login, router, onboardingCompleted])
+    // PKCE verifier 없으면 토큰 교환 불가
+    const verifier = typeof window !== "undefined" ? sessionStorage.getItem("pkce_code_verifier") : null
+    if (!verifier) {
+      setStatus("error")
+      setMessage("PKCE 코드가 없습니다(세션이 초기화됨). 로그인부터 다시 진행해주세요.")
+      return
+    }
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 bg-background">
-        <div className="flex items-center gap-2 text-destructive">
-          <AlertCircle className="w-5 h-5" />
-          <span className="font-medium">오류 발생</span>
-        </div>
-        <p className="text-sm text-muted-foreground text-center">{error}</p>
-        <Button asChild variant="outline">
-          <Link href="/auth/sign-in">다시 로그인하기</Link>
-        </Button>
-      </div>
-    )
-  }
+    ;(async () => {
+      setStatus("exchanging")
+      setMessage("토큰 교환 중...")
 
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background">
-      <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      <p className="text-muted-foreground text-sm">로그인 처리 중...</p>
-    </div>
-  )
-}
-
-export default function CallbackPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground text-sm">로딩 중...</p>
-        </div>
+      const tokens = await exchangeCodeForTokens(code)
+      if (!tokens) {
+        setStatus("error")
+        setMessage("토큰 교환에 실패했습니다. (invalid_grant이면 보통 code 재사용/중복 실행 문제입니다)")
+        return
       }
-    >
-      <CallbackContent />
-    </Suspense>
+
+      // ✅ MVP 임시 저장 (추후 쿠키/BFF로 바꿀 수 있음)
+      try {
+        sessionStorage.setItem("access_token", tokens.accessToken)
+        sessionStorage.setItem("id_token", tokens.idToken)
+        sessionStorage.setItem("refresh_token", tokens.refreshToken)
+      } catch {}
+
+      setStatus("success")
+      setMessage("로그인 성공! 이동 중...")
+
+      // code 파라미터 제거하고 다음 단계로 이동
+      router.replace("/onboarding/cat")
+    })()
+  }, [code, error, errorDescription, router])
+
+  return (
+    <main className="min-h-screen flex items-center justify-center p-6">
+      <div className="w-full max-w-md rounded-xl border bg-white/70 p-6 shadow">
+        <h1 className="text-lg font-semibold mb-2">로그인 처리</h1>
+
+        {status === "exchanging" && <p>⏳ {message}</p>}
+        {status === "success" && <p>✅ {message}</p>}
+        {status === "error" && (
+          <>
+            <p className="text-red-600">❌ {message}</p>
+            <button
+              className="mt-4 w-full rounded-lg border px-4 py-2"
+              onClick={() => router.replace("/auth/sign-in")}
+            >
+              다시 로그인하기
+            </button>
+          </>
+        )}
+
+        {status === "idle" && <p>대기 중...</p>}
+      </div>
+    </main>
   )
 }
