@@ -12,6 +12,24 @@ import { getMonthlyCareForDate, type MonthlyCareRecord } from "@/lib/care-monthl
 import { Calendar, Gift, MessageCircle, ExternalLink, Bell } from "lucide-react"
 import { useEffect, useState } from "react"
 
+const stampImages = [
+  "/stamps/cat-stamp-1.png",
+  "/stamps/cat-stamp-2.png",
+  "/stamps/cat-stamp-3.png",
+  "/stamps/cat-stamp-4.png",
+  "/stamps/cat-stamp-5.png",
+  "/stamps/cat-stamp-6.png",
+]
+
+const getStampIndex = (value: string) => {
+  let hash = 0
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i)
+    hash |= 0
+  }
+  return Math.abs(hash) % stampImages.length
+}
+
 export default function HomePage() {
   const { activeCat, activeCatId } = useActiveCat()
   const [monthlyCare, setMonthlyCare] = useState<MonthlyCareRecord>({
@@ -19,6 +37,7 @@ export default function HomePage() {
     streak: 0,
     completionRate: 0,
   })
+  const [processedStamps, setProcessedStamps] = useState<Record<string, string>>({})
   const [tipOpen, setTipOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notifications, setNotifications] = useState([
@@ -41,6 +60,91 @@ export default function HomePage() {
   useEffect(() => {
     setMonthlyCare(getMonthlyCareForDate(new Date(), activeCatId ?? undefined))
   }, [activeCatId])
+
+  useEffect(() => {
+    let isActive = true
+    const nextStamps: Record<string, string> = {}
+    let remaining = stampImages.length
+
+    const finalize = () => {
+      if (isActive) {
+        setProcessedStamps(nextStamps)
+      }
+    }
+
+    stampImages.forEach((src) => {
+      const img = new Image()
+      img.crossOrigin = "anonymous"
+      img.onload = () => {
+        const canvas = document.createElement("canvas")
+        canvas.width = img.width
+        canvas.height = img.height
+        const ctx = canvas.getContext("2d")
+        if (!ctx) {
+          nextStamps[src] = src
+          remaining -= 1
+          if (remaining === 0) finalize()
+          return
+        }
+
+        ctx.drawImage(img, 0, 0)
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+        const { data } = imageData
+        const samplePoints = [
+          [0, 0],
+          [canvas.width - 1, 0],
+          [0, canvas.height - 1],
+          [canvas.width - 1, canvas.height - 1],
+          [Math.floor(canvas.width / 2), 0],
+          [0, Math.floor(canvas.height / 2)],
+          [canvas.width - 1, Math.floor(canvas.height / 2)],
+        ]
+        let sumR = 0
+        let sumG = 0
+        let sumB = 0
+        samplePoints.forEach(([x, y]) => {
+          const index = (y * canvas.width + x) * 4
+          sumR += data[index]
+          sumG += data[index + 1]
+          sumB += data[index + 2]
+        })
+        const sampleCount = samplePoints.length
+        const bgR = sumR / sampleCount
+        const bgG = sumG / sampleCount
+        const bgB = sumB / sampleCount
+        const threshold = 22
+        const softEdge = 16
+
+        for (let i = 0; i < data.length; i += 4) {
+          const dr = data[i] - bgR
+          const dg = data[i + 1] - bgG
+          const db = data[i + 2] - bgB
+          const distance = Math.sqrt(dr * dr + dg * dg + db * db)
+          if (distance <= threshold) {
+            data[i + 3] = 0
+          } else if (distance < threshold + softEdge) {
+            const factor = (distance - threshold) / softEdge
+            data[i + 3] = Math.round(data[i + 3] * factor)
+          }
+        }
+
+        ctx.putImageData(imageData, 0, 0)
+        nextStamps[src] = canvas.toDataURL("image/png")
+        remaining -= 1
+        if (remaining === 0) finalize()
+      }
+      img.onerror = () => {
+        nextStamps[src] = src
+        remaining -= 1
+        if (remaining === 0) finalize()
+      }
+      img.src = src
+    })
+
+    return () => {
+      isActive = false
+    }
+  }, [])
 
   const today = new Date().toLocaleDateString("ko-KR", {
     month: "long",
@@ -88,24 +192,6 @@ export default function HomePage() {
 
   const formatISODate = (year: number, monthIndex: number, day: number) =>
     `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-
-  const stampImages = [
-    "/stamps/cat-stamp-1.png",
-    "/stamps/cat-stamp-2.png",
-    "/stamps/cat-stamp-3.png",
-    "/stamps/cat-stamp-4.png",
-    "/stamps/cat-stamp-5.png",
-    "/stamps/cat-stamp-6.png",
-  ]
-
-  const getStampIndex = (value: string) => {
-    let hash = 0
-    for (let i = 0; i < value.length; i += 1) {
-      hash = (hash << 5) - hash + value.charCodeAt(i)
-      hash |= 0
-    }
-    return Math.abs(hash) % stampImages.length
-  }
 
   const now = new Date()
   const year = now.getFullYear()
@@ -168,6 +254,7 @@ export default function HomePage() {
     const isCompleted = completedSet.has(dateISO)
     const hasSurveyStamp = surveyCompletedDays.has(dayNumber)
     const stampSrc = hasSurveyStamp ? stampImages[getStampIndex(dateISO)] : null
+    const resolvedStampSrc = stampSrc ? processedStamps[stampSrc] ?? stampSrc : null
 
     return (
       <div
@@ -176,18 +263,10 @@ export default function HomePage() {
           isCompleted ? "border-primary/30 bg-primary/10 text-primary" : "border-border/40 bg-muted/40 text-muted-foreground"
         }`}
       >
-        {stampSrc ? (
+        {resolvedStampSrc ? (
           <>
-            <span
-              className="absolute inset-0 flex items-center justify-center stamp-sparkle"
-              aria-hidden="true"
-            >
-              <img
-                src={stampSrc}
-                alt=""
-                className="h-full w-full object-contain mix-blend-multiply opacity-95"
-                loading="lazy"
-              />
+            <span className="absolute inset-0 flex items-center justify-center stamp-sparkle" aria-hidden="true">
+              <span className="stamp-image" style={{ backgroundImage: `url(${resolvedStampSrc})` }} />
             </span>
             <span className="absolute right-0.5 top-0.5 rounded bg-background/80 px-0.5 text-[8px] font-medium text-foreground">
               {dayNumber}
