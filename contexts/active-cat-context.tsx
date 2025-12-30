@@ -11,6 +11,7 @@ import {
   saveCats,
 } from "@/lib/storage"
 import { migrateCareMonthlyToCat } from "@/lib/care-monthly"
+import { normalizeMedicalHistory } from "@/lib/medical-history"
 
 interface ActiveCatContextType {
   cats: CatProfile[]
@@ -36,8 +37,24 @@ function ensureCatId(profile: CatProfile): CatProfile {
   return { ...profile, id: createCatId() }
 }
 
-function normalizeCats(cats: CatProfile[]): CatProfile[] {
-  return cats.map((cat) => (cat.id ? cat : { ...cat, id: createCatId() }))
+function normalizeCats(cats: CatProfile[]): { cats: CatProfile[]; didUpdate: boolean } {
+  let didUpdate = false
+  const normalizedCats = cats.map((cat) => {
+    let nextCat = cat
+    if (!cat.id) {
+      nextCat = { ...nextCat, id: createCatId() }
+      didUpdate = true
+    }
+    const normalizedHistory = normalizeMedicalHistory(cat.medicalHistory)
+    const historyChanged =
+      JSON.stringify(normalizedHistory ?? null) !== JSON.stringify(cat.medicalHistory ?? null)
+    if (historyChanged) {
+      nextCat = { ...nextCat, medicalHistory: normalizedHistory }
+      didUpdate = true
+    }
+    return nextCat
+  })
+  return { cats: normalizedCats, didUpdate }
 }
 
 export function ActiveCatProvider({ children }: { children: ReactNode }) {
@@ -52,7 +69,11 @@ export function ActiveCatProvider({ children }: { children: ReactNode }) {
     if (storedCats.length === 0) {
       const legacyProfile = loadCatProfile<CatProfile>()
       if (legacyProfile) {
-        const normalized = ensureCatId(legacyProfile)
+        const normalizedProfile = {
+          ...legacyProfile,
+          medicalHistory: normalizeMedicalHistory(legacyProfile.medicalHistory),
+        }
+        const normalized = ensureCatId(normalizedProfile)
         const nextCats = [normalized]
         saveCats(nextCats)
         setCatsState(nextCats)
@@ -66,9 +87,8 @@ export function ActiveCatProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const normalizedCats = normalizeCats(storedCats)
-    const idsUpdated = storedCats.some((cat, index) => cat.id !== normalizedCats[index]?.id)
-    if (idsUpdated) {
+    const { cats: normalizedCats, didUpdate } = normalizeCats(storedCats)
+    if (didUpdate) {
       saveCats(normalizedCats)
     }
 

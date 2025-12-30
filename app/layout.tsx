@@ -8,7 +8,11 @@ import { ActiveCatProvider } from "@/contexts/active-cat-context"
 import { OnboardingProvider } from "@/contexts/onboarding-context"
 import "./globals.css"
 
-const notoSansKR = Noto_Sans_KR({ subsets: ["latin"], weight: ["400", "500", "600", "700"] })
+const notoSansKR = Noto_Sans_KR({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+})
 
 export const metadata: Metadata = {
   title: "Are You Okat? - 고양이 건강 기록",

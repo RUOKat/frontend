@@ -8,7 +8,6 @@ export default function SignOutPage() {
   const { logout } = useAuth()
 
   useEffect(() => {
-    // 로그아웃 처리
     logout()
   }, [logout])
 

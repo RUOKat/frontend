@@ -1,3 +1,4 @@
+import { createEmptyMedicalHistory } from "./medical-history"
 import type { CatProfile, DailyRecord, VetVisit, User } from "./types"
 
 // Mock 사용자
@@ -25,7 +26,7 @@ export const mockCatProfile: CatProfile = {
   multiCat: false,
   mealsPerDay: 2,
   waterIntakeTendency: "normal",
-  medicalHistory: [],
+  medicalHistory: createEmptyMedicalHistory(),
 }
 
 // Mock 일일 기록

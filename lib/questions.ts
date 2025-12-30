@@ -1,5 +1,6 @@
 import type { CatProfile, Question } from "./types"
 import questionsData from "./questions.json"
+import { normalizeMedicalHistory } from "./medical-history"
 
 type FollowUpCategory = "FLUTD" | "CKD" | "GI" | "PAIN"
 
@@ -21,14 +22,18 @@ export function generateOnboardingQuestions(catProfile: CatProfile): Question[] 
     : catProfile.estimatedAge
       ? Math.floor(catProfile.estimatedAge / 12)
       : 5
+  const medicalHistory = normalizeMedicalHistory(catProfile.medicalHistory)
+  const hasRenalUrinaryHistory = medicalHistory?.selectedGroupIds.includes("renal-urinary") ?? false
+  const hasCkdHistory = medicalHistory?.selectedItemIds.includes("ckd") ?? false
+  const hasMusculoskeletalHistory = medicalHistory?.selectedGroupIds.includes("musculoskeletal") ?? false
 
-  if (catProfile.gender === "male" || catProfile.medicalHistory?.includes("urinary")) {
+  if (catProfile.gender === "male" || hasRenalUrinaryHistory) {
     questions.push(getOnboardingQuestion("q1_urinary_male"))
   } else {
     questions.push(getOnboardingQuestion("q1_urinary_general"))
   }
 
-  if (age >= 7 || catProfile.medicalHistory?.includes("kidney") || catProfile.medicalHistory?.includes("ckd")) {
+  if (age >= 7 || hasRenalUrinaryHistory || hasCkdHistory) {
     questions.push(getOnboardingQuestion("q2_water_senior"))
   } else {
     questions.push(getOnboardingQuestion("q2_water_general"))
@@ -36,7 +41,7 @@ export function generateOnboardingQuestions(catProfile: CatProfile): Question[] 
 
   questions.push(getOnboardingQuestion("q3_vomiting"))
 
-  if (age >= 10 || catProfile.medicalHistory?.includes("joint")) {
+  if (age >= 10 || hasMusculoskeletalHistory) {
     questions.push(getOnboardingQuestion("q4_mobility_senior"))
   } else {
     questions.push(getOnboardingQuestion("q4_activity_general"))

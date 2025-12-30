@@ -1,4 +1,5 @@
 import type { CatProfile, OnboardingAnswers, FollowUpPlan } from "./types"
+import { normalizeMedicalHistory } from "./medical-history"
 import { getFollowUpQuestions } from "./questions"
 
 interface CategoryScore {
@@ -22,6 +23,9 @@ export function evaluateSuspicion(catProfile: CatProfile, onboardingAnswers: Onb
     : catProfile.estimatedAge
       ? Math.floor(catProfile.estimatedAge / 12)
       : 5
+  const medicalHistory = normalizeMedicalHistory(catProfile.medicalHistory)
+  const hasRenalUrinaryHistory = medicalHistory?.selectedGroupIds.includes("renal-urinary") ?? false
+  const hasCkdHistory = medicalHistory?.selectedItemIds.includes("ckd") ?? false
 
   // 나이 기반
   if (age >= 7) {
@@ -44,13 +48,13 @@ export function evaluateSuspicion(catProfile: CatProfile, onboardingAnswers: Onb
   }
 
   // 병력 기반
-  if (catProfile.medicalHistory?.includes("urinary") || catProfile.medicalHistory?.includes("kidney")) {
+  if (hasRenalUrinaryHistory) {
     const flutdScore = scores.find((s) => s.category === "FLUTD")!
     flutdScore.score += 1
     flutdScore.reasons.push("요로/신장 병력")
   }
 
-  if (catProfile.medicalHistory?.includes("ckd")) {
+  if (hasCkdHistory) {
     const ckdScore = scores.find((s) => s.category === "CKD")!
     ckdScore.score += 2
     ckdScore.reasons.push("CKD 병력")

@@ -1,3 +1,5 @@
+import type { MedicalHistory } from "./medical-history"
+
 // 고양이 프로필 타입
 export type AdoptionSource = "shelter" | "agency" | "private" | "rescue" | "other"
 
@@ -48,7 +50,7 @@ export interface CatProfile {
   catCount?: number
   mealsPerDay?: number
   waterIntakeTendency?: "low" | "normal" | "high" | "unknown"
-  medicalHistory?: MedicalCondition[]
+  medicalHistory?: MedicalHistory
   medications?: string
   medicationText?: string
   medicationsSelected?: MedicationSelection[]
@@ -58,19 +60,6 @@ export interface CatProfile {
   notificationPreference?: "all" | "important" | "none"
   profilePhoto?: string
 }
-
-
-export type MedicalCondition =
-  | "kidney"
-  | "urinary"
-  | "ckd"
-  | "diabetes"
-  | "thyroid"
-  | "dental"
-  | "skin"
-  | "joint"
-  | "heart"
-  | "unknown"
 
 export type ShareLevel = "signal" | "summary" | "full"
 

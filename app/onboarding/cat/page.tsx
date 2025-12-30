@@ -2,7 +2,9 @@
 
 import { useEffect, useState, type ChangeEvent } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
@@ -11,20 +13,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { catBreeds } from "@/lib/mock"
-import type { AdoptionSource, CatProfile, MedicalCondition, MedicationSelection, Weekday } from "@/lib/types"
+import {
+  createEmptyMedicalHistory,
+  getMedicalHistoryGroupMap,
+  getMedicalHistoryItemMap,
+  getMedicalHistoryItemsByGroup,
+  medicalHistoryGroups,
+  normalizeMedicalHistory,
+  sortMedicalHistoryGroupIds,
+  sortMedicalHistoryItemIds,
+  type MedicalHistoryGroupId,
+  type MedicalHistoryItemId,
+  type MedicalHistoryV2,
+} from "@/lib/medical-history"
+import type { AdoptionSource, CatProfile, MedicationSelection, Weekday } from "@/lib/types"
 import { Cat, ChevronDown, ChevronUp, ArrowRight, X } from "lucide-react"
 
-const medicalConditions: { value: MedicalCondition; label: string }[] = [
-  { value: "kidney", label: "신장/요로" },
-  { value: "ckd", label: "CKD (만성신장병)" },
-  { value: "diabetes", label: "당뇨" },
-  { value: "thyroid", label: "갑상선" },
-  { value: "dental", label: "치과" },
-  { value: "skin", label: "피부" },
-  { value: "joint", label: "관절" },
-  { value: "heart", label: "심장" },
-  { value: "unknown", label: "모름" },
-]
+const medicalHistoryGroupMap = getMedicalHistoryGroupMap()
+const medicalHistoryItemMap = getMedicalHistoryItemMap()
+const medicalHistoryItemsByGroup = getMedicalHistoryItemsByGroup()
 
 const adoptionPaths = ["보호소/입양기관", "지인/가족", "길에서 구조", "기타"]
 const agencyAdoptionPath = adoptionPaths[0]
@@ -40,16 +47,16 @@ const weekDays: { value: Weekday; label: string }[] = [
 ]
 const weekDayOrder = weekDays.map((day) => day.value)
 
-const medicationRecommendationMap: Partial<Record<MedicalCondition, string[]>> = {
-  kidney: ["인결합제", "수액(피하수액)", "구토억제제", "식욕촉진제", "요로 처방식", "오메가3"],
-  urinary: ["인결합제", "수액(피하수액)", "구토억제제", "식욕촉진제", "요로 처방식", "오메가3"],
-  ckd: ["인결합제", "수액(피하수액)", "구토억제제", "식욕촉진제", "요로 처방식", "오메가3"],
+type MedicalHistorySignalId = MedicalHistoryGroupId | MedicalHistoryItemId
+
+const medicationRecommendationMap: Partial<Record<MedicalHistorySignalId, string[]>> = {
+  "renal-urinary": ["인결합제", "수액(피하수액)", "구토억제제", "식욕촉진제", "요로 처방식", "오메가3"],
   diabetes: ["인슐린", "혈당측정", "당뇨 처방식"],
-  thyroid: ["메티마졸(항갑상선제)"],
-  joint: ["관절영양제", "진통제(수의사 처방)"],
-  heart: ["이뇨제(수의사 처방)", "심장약(수의사 처방)"],
-  dental: ["항생제(수의사 처방)", "소염제(수의사 처방)"],
-  skin: ["항생제(수의사 처방)", "소염제(수의사 처방)"],
+  hyperthyroidism: ["메티마졸(항갑상선제)"],
+  musculoskeletal: ["관절영양제", "진통제(수의사 처방)"],
+  cardiovascular: ["이뇨제(수의사 처방)", "심장약(수의사 처방)"],
+  oral: ["항생제(수의사 처방)", "소염제(수의사 처방)"],
+  "dermatologic-allergy": ["항생제(수의사 처방)", "소염제(수의사 처방)"],
 }
 
 const medicationCatalog = [
@@ -157,7 +164,7 @@ export default function CatProfilePage() {
   const [catCount, setCatCount] = useState("")
   const [mealsPerDay, setMealsPerDay] = useState("")
   const [waterIntakeTendency, setWaterIntakeTendency] = useState<"low" | "normal" | "high" | "unknown" | "">("")
-  const [medicalHistory, setMedicalHistory] = useState<MedicalCondition[]>([])
+  const [medicalHistory, setMedicalHistory] = useState<MedicalHistoryV2>(() => createEmptyMedicalHistory())
   const [medicationsSelected, setMedicationsSelected] = useState<MedicationSelection[]>([])
   const [medicationSearchQuery, setMedicationSearchQuery] = useState("")
   const [notes, setNotes] = useState("")
@@ -184,8 +191,15 @@ export default function CatProfilePage() {
     waterSource &&
     isSurveyScheduleValid
 
-  const recommendedMedications = medicalHistory.reduce<string[]>((acc, condition) => {
-    const candidates = medicationRecommendationMap[condition] ?? []
+  const selectedGroupIds = medicalHistory.selectedGroupIds
+  const selectedItemIds = medicalHistory.selectedItemIds
+  const selectedGroupSet = new Set(selectedGroupIds)
+  const selectedItemSet = new Set(selectedItemIds)
+  const selectedItemCount = selectedItemIds.length
+  const selectedMedicalSignalIds = new Set<MedicalHistorySignalId>([...selectedGroupIds, ...selectedItemIds])
+
+  const recommendedMedications = Array.from(selectedMedicalSignalIds).reduce<string[]>((acc, conditionId) => {
+    const candidates = medicationRecommendationMap[conditionId] ?? []
     candidates.forEach((item) => {
       if (!acc.includes(item)) acc.push(item)
     })
@@ -287,7 +301,8 @@ export default function CatProfilePage() {
     setCatCount(activeCat.catCount != null ? String(activeCat.catCount) : "")
     setMealsPerDay(activeCat.mealsPerDay != null ? String(activeCat.mealsPerDay) : "")
     setWaterIntakeTendency(activeCat.waterIntakeTendency ?? "")
-    setMedicalHistory(activeCat.medicalHistory ?? [])
+    const normalizedMedicalHistory = normalizeMedicalHistory(activeCat.medicalHistory) ?? createEmptyMedicalHistory()
+    setMedicalHistory(normalizedMedicalHistory)
     const storedMedicationsSelected = activeCat.medicationsSelected ?? []
     setMedicationsSelected(storedMedicationsSelected)
     setMedicationSearchQuery("")
@@ -328,8 +343,40 @@ export default function CatProfilePage() {
     })
   }
 
-  const toggleMedicalCondition = (condition: MedicalCondition) => {
-    setMedicalHistory((prev) => (prev.includes(condition) ? prev.filter((c) => c !== condition) : [...prev, condition]))
+  const toggleMedicalGroup = (groupId: MedicalHistoryGroupId) => {
+    setMedicalHistory((prev) => {
+      const isSelected = prev.selectedGroupIds.includes(groupId)
+      if (isSelected) {
+        const nextGroupIds = prev.selectedGroupIds.filter((id) => id !== groupId)
+        const nextItemIds = prev.selectedItemIds.filter((itemId) => medicalHistoryItemMap[itemId]?.groupId !== groupId)
+        return {
+          ...prev,
+          selectedGroupIds: nextGroupIds,
+          selectedItemIds: nextItemIds,
+        }
+      }
+      const nextGroupIds = sortMedicalHistoryGroupIds([...prev.selectedGroupIds, groupId])
+      return { ...prev, selectedGroupIds: nextGroupIds }
+    })
+  }
+
+  const toggleMedicalItem = (itemId: MedicalHistoryItemId) => {
+    const groupId = medicalHistoryItemMap[itemId]?.groupId
+    setMedicalHistory((prev) => {
+      const isSelected = prev.selectedItemIds.includes(itemId)
+      const nextItemIds = isSelected
+        ? prev.selectedItemIds.filter((id) => id !== itemId)
+        : sortMedicalHistoryItemIds([...prev.selectedItemIds, itemId])
+      const nextGroupIds =
+        groupId && !prev.selectedGroupIds.includes(groupId)
+          ? sortMedicalHistoryGroupIds([...prev.selectedGroupIds, groupId])
+          : prev.selectedGroupIds
+      return { ...prev, selectedGroupIds: nextGroupIds, selectedItemIds: nextItemIds }
+    })
+  }
+
+  const clearMedicalHistory = () => {
+    setMedicalHistory(createEmptyMedicalHistory())
   }
 
   const handleSubmit = () => {
@@ -349,6 +396,9 @@ export default function CatProfilePage() {
     const medicationsSelectedValue = normalizedSelections
     const legacyParts = medicationsSelectedValue.map((item) => item.label)
     const medicationLegacy = Array.from(new Set(legacyParts.map((item) => item.trim()).filter(Boolean))).join(", ")
+    const normalizedMedicalHistory = normalizeMedicalHistory(medicalHistory) ?? createEmptyMedicalHistory()
+    const hasMedicalHistorySelections =
+      normalizedMedicalHistory.selectedGroupIds.length > 0 || normalizedMedicalHistory.selectedItemIds.length > 0
 
     const profile: CatProfile = {
       id: nextId,
@@ -374,7 +424,7 @@ export default function CatProfilePage() {
       catCount: multiCat && catCount ? Number.parseInt(catCount, 10) : undefined,
       mealsPerDay: mealsPerDay ? Number.parseInt(mealsPerDay, 10) : undefined,
       waterIntakeTendency: waterIntakeTendency as "low" | "normal" | "high" | "unknown" | undefined,
-      medicalHistory: medicalHistory.length > 0 ? medicalHistory : undefined,
+      medicalHistory: hasMedicalHistorySelections ? normalizedMedicalHistory : undefined,
       medications: medicationLegacy,
       medicationText: "",
       medicationsSelected: medicationsSelectedValue,
@@ -822,22 +872,88 @@ export default function CatProfilePage() {
                 </div>
 
                 {/* 기존 병력 */}
-                <div className="space-y-2">
-                  <Label>기존 병력 (해당하는 것 모두 선택)</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {medicalConditions.map((condition) => (
-                      <Button
-                        key={condition.value}
-                        type="button"
-                        variant={medicalHistory.includes(condition.value) ? "default" : "outline"}
-                        className={!medicalHistory.includes(condition.value) ? "bg-transparent" : ""}
-                        onClick={() => toggleMedicalCondition(condition.value)}
-                        size="sm"
-                      >
-                        {condition.label}
-                      </Button>
-                    ))}
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Label>기존 병력 (해당하는 것 모두 선택)</Label>
+                    <span className="text-xs text-muted-foreground">선택됨 {selectedItemCount}개</span>
                   </div>
+
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">1단계. 해당하는 질환군을 먼저 선택하세요.</p>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {medicalHistoryGroups.map((group) => {
+                        const isSelected = selectedGroupSet.has(group.id)
+                        return (
+                          <button
+                            key={group.id}
+                            type="button"
+                            onClick={() => toggleMedicalGroup(group.id)}
+                            className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                              isSelected
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-border bg-background text-foreground"
+                            }`}
+                            aria-pressed={isSelected}
+                          >
+                            {group.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={clearMedicalHistory}>
+                      모르겠어요/없어요
+                    </Button>
+                    <span className="text-xs text-muted-foreground">선택이 어려우면 비워둘 수 있어요.</span>
+                  </div>
+
+                  {selectedGroupIds.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-xs text-muted-foreground">2단계. 선택한 질환군에서 세부 항목을 체크하세요.</p>
+                      {selectedGroupIds.map((groupId) => {
+                        const group = medicalHistoryGroupMap[groupId]
+                        const items = medicalHistoryItemsByGroup[groupId] ?? []
+                        const selectedCount = items.filter((item) => selectedItemSet.has(item.id)).length
+                        return (
+                          <div key={groupId} className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="text-sm font-medium text-foreground">{group.label}</span>
+                              <span className="text-xs text-muted-foreground">선택 {selectedCount}개</span>
+                            </div>
+                            <div className="space-y-3">
+                              {items.map((item) => {
+                                const checkboxId = `medical-history-${item.id}`
+                                return (
+                                  <div key={item.id} className="flex items-start gap-3">
+                                    <Checkbox
+                                      id={checkboxId}
+                                      checked={selectedItemSet.has(item.id)}
+                                      onCheckedChange={() => toggleMedicalItem(item.id)}
+                                    />
+                                    <div className="space-y-1">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <Label htmlFor={checkboxId} className="text-sm font-medium leading-relaxed">
+                                          {item.label}
+                                        </Label>
+                                        <Badge
+                                          variant={item.type === "symptom" ? "outline" : "secondary"}
+                                          className="text-[10px]"
+                                        >
+                                          {item.type === "symptom" ? "증상군" : "질환"}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* 복용 약/영양제 */}
