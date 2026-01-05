@@ -54,6 +54,9 @@ export default function CallbackPage() {
       setMessage("로그인 정보를 확인 중입니다...")
 
       const tokens = await exchangeCodeForTokens(code)
+      console.log("accessToken head:", tokens?.accessToken?.slice(0, 20))
+      console.log("idToken head:", tokens?.idToken?.slice(0, 20))
+
       if (!tokens) {
         setStatus("error")
         setMessage("로그인 토큰 교환에 실패했습니다. 다시 로그인해주세요.")

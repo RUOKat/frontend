@@ -79,8 +79,13 @@ export function clearOAuthState(): void {
   sessionStorage.removeItem("oauth_state")
 }
 
+/**
+ * Cognito Hosted UI 로그인 URL 생성
+ * - Google 로그인(provider=Google)일 때는 prompt=select_account로 "계정 선택 화면"을 강제로 띄움
+ * - (옵션) max_age=0은 "최근 로그인 재확인"에 가깝게 동작할 때가 있어 select_account와 함께 쓰면 더 확실한 편
+ */
 export async function getCognitoLoginUrl(
-  options: { provider?: string; idpIdentifier?: string } = {},
+  options: { provider?: string; idpIdentifier?: string; forceAccountSelect?: boolean; prompt?: "select_account" | "login" } = {},
 ): Promise<string> {
   const { codeChallenge } = await generatePKCE()
 
@@ -106,9 +111,23 @@ export async function getCognitoLoginUrl(
     params.set("idp_identifier", options.idpIdentifier)
   }
 
+  // ✅ Google SSO에서 자동 패스 방지: 계정 선택/재로그인 강제
+  // - 기본은 select_account (원하면 prompt: "login"으로 더 강하게)
+  const isGoogle = options.provider?.toLowerCase() === "google"
+  const forceSelect = options.forceAccountSelect ?? true
+  if (isGoogle && forceSelect) {
+    params.set("prompt", options.prompt ?? "select_account")
+    // 필요 없으면 지워도 됨 (prompt만으로도 보통 충분)
+    params.set("max_age", "0")
+  }
+
   return `${cognitoConfig.domain}/oauth2/authorize?${params.toString()}`
 }
 
+/**
+ * Cognito Hosted UI 로그아웃 URL
+ * - ✅ 너 계정은 /oauth2/logout 가 404였으므로 /logout 사용
+ */
 export function getCognitoLogoutUrl(): string {
   const params = new URLSearchParams({
     client_id: cognitoConfig.clientId,

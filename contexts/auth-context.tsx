@@ -41,6 +41,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    // ✅ /auth/sign-in에서는 "자동 로그인 복구"를 하지 않음 (Hosted UI 콜백/JWT 확인을 위해)
+    // - sign-in 화면에서 저장된 세션으로 자동 리다이렉트되는 문제를 방지
+    if (typeof window !== "undefined") {
+      const path = window.location.pathname
+      if (path === "/auth/sign-in") {
+        setIsLoading(false)
+        return
+      }
+    }
+
     // 1) 저장된 인증 상태 로드 (localStorage 등)
     const savedAuth = loadAuth<AuthState>()
     if (savedAuth?.isAuthenticated && savedAuth?.user) {
