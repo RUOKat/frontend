@@ -19,58 +19,46 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/contexts/auth-context"
-import { getCognitoLoginUrl, isCognitoConfigured } from "@/lib/cognito"
-import { Cat, Chrome, Mail, Shield, Zap } from "lucide-react"
+import { isCognitoConfigured, signUp } from "@/lib/cognito"
+import { Cat, Shield, UserPlus, Zap } from "lucide-react"
 
-type LoginResponse = {
-  idToken: string
-  accessToken: string
-  refreshToken?: string | null
-  expiresIn?: number | null
-  message?: string
-}
-
-function parseJwtPayload(idToken: string): { sub?: string; email?: string; name?: string } | null {
-  try {
-    const base64Url = idToken.split(".")[1]
-    if (!base64Url) return null
-
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/")
-    const padded = base64 + "===".slice((base64.length + 3) % 4)
-
-    return JSON.parse(atob(padded))
-  } catch {
-    return null
+function getSignUpErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) return "회원가입에 실패했어요."
+  if (error.message.includes("Cognito 환경 변수")) {
+    return "현재는 회원가입을 사용할 수 없어요. 로그인으로 진행해주세요."
+  }
+  switch (error.name) {
+    case "UsernameExistsException":
+      return "이미 가입된 이메일이에요. 로그인해 주세요."
+    case "InvalidPasswordException":
+      return "비밀번호가 규칙에 맞지 않아요. 다시 확인해주세요."
+    case "InvalidParameterException":
+      return "입력한 정보를 다시 확인해주세요."
+    case "CodeDeliveryFailureException":
+      return "인증 메일 전송에 실패했어요. 잠시 후 다시 시도해주세요."
+    case "TooManyRequestsException":
+    case "LimitExceededException":
+      return "요청이 너무 많아요. 잠시 후 다시 시도해주세요."
+    default:
+      return error.message || "회원가입에 실패했어요."
   }
 }
 
-export default function SignInPage() {
+export default function SignUpPage() {
   const router = useRouter()
-  const { login, mockLogin } = useAuth()
+  const { mockLogin } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [agreeTerms, setAgreeTerms] = useState(false)
   const [agreePrivacy, setAgreePrivacy] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const cognitoEnabled = isCognitoConfigured()
   const canContinue = agreeTerms && agreePrivacy
-  const canSubmit = canContinue && email.trim().length > 0 && password.length > 0
+  const canSubmit = canContinue && email.trim().length > 0 && password.length > 0 && confirmPassword.length > 0
 
-  const handleGoogleLogin = async () => {
-    if (!canContinue) return
-    setIsLoading(true)
-    setError(null)
-    try {
-      const loginUrl = await getCognitoLoginUrl({ provider: "Google" })
-      window.location.href = loginUrl
-    } catch (error) {
-      console.error("Cognito login error:", error)
-      setIsLoading(false)
-    }
-  }
-
-  const handlePasswordLogin = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSignUp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!canContinue) return
 
@@ -79,51 +67,28 @@ export default function SignInPage() {
       setError("이메일과 비밀번호를 입력해주세요.")
       return
     }
+    if (password !== confirmPassword) {
+      setError("비밀번호가 서로 달라요.")
+      return
+    }
 
     setIsLoading(true)
     setError(null)
 
     try {
-      const response = await fetch("/api/auth/password-login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email: trimmedEmail, password }),
-      })
-
-      const data = (await response.json()) as LoginResponse
-      if (!response.ok) {
-        setError(data.message || "로그인에 실패했어요.")
-        setIsLoading(false)
-        return
+      const result = await signUp(trimmedEmail, password)
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem("pending_signup_email", trimmedEmail)
+          sessionStorage.setItem("pending_signup_password", password)
+          if (result.codeDeliveryDetails?.destination) {
+            sessionStorage.setItem("pending_signup_destination", result.codeDeliveryDetails.destination)
+          }
+        } catch {}
       }
-
-      const payload = parseJwtPayload(data.idToken)
-      const user = {
-        id: payload?.sub || trimmedEmail,
-        email: payload?.email || trimmedEmail,
-        name: payload?.name,
-      }
-
-      login(user, {
-        accessToken: data.accessToken,
-        idToken: data.idToken,
-        refreshToken: data.refreshToken || undefined,
-      })
-
-      try {
-        sessionStorage.setItem("access_token", data.accessToken)
-        sessionStorage.setItem("id_token", data.idToken)
-        if (data.refreshToken) {
-          sessionStorage.setItem("refresh_token", data.refreshToken)
-        }
-      } catch {}
-
-      router.replace("/onboarding/cat")
+      router.push(`/auth/verify?email=${encodeURIComponent(trimmedEmail)}`)
     } catch (error) {
-      const message = error instanceof Error ? error.message : "로그인에 실패했어요."
-      setError(message)
+      setError(getSignUpErrorMessage(error))
       setIsLoading(false)
     }
   }
@@ -155,8 +120,8 @@ export default function SignInPage() {
       <main className="flex-1 flex flex-col justify-center px-6 pb-safe-bottom">
         <Card className="border-0 shadow-lg">
           <CardHeader className="text-center pb-4">
-            <CardTitle className="text-lg">시작하기</CardTitle>
-            <CardDescription>고양이 건강 기록을 시작해보세요</CardDescription>
+            <CardTitle className="text-lg">회원가입</CardTitle>
+            <CardDescription>이메일로 계정을 만들어보세요</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
@@ -231,24 +196,7 @@ export default function SignInPage() {
 
             {cognitoEnabled ? (
               <div className="space-y-4">
-                <Button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  disabled={!canContinue || isLoading}
-                  className="w-full h-12"
-                  size="lg"
-                >
-                  <Chrome className="w-5 h-5 mr-2" />
-                  {isLoading ? "로그인 중..." : "Google로 계속하기"}
-                </Button>
-
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="h-px flex-1 bg-border" />
-                  <span>또는</span>
-                  <span className="h-px flex-1 bg-border" />
-                </div>
-
-                <form onSubmit={handlePasswordLogin} className="space-y-3">
+                <form onSubmit={handleSignUp} className="space-y-3">
                   <div className="space-y-2">
                     <Label htmlFor="email">이메일</Label>
                     <Input
@@ -267,7 +215,7 @@ export default function SignInPage() {
                     <Input
                       id="password"
                       type="password"
-                      autoComplete="current-password"
+                      autoComplete="new-password"
                       placeholder="비밀번호를 입력하세요"
                       value={password}
                       onChange={(event) => setPassword(event.target.value)}
@@ -275,17 +223,30 @@ export default function SignInPage() {
                       required
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">비밀번호 확인</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      autoComplete="new-password"
+                      placeholder="비밀번호를 다시 입력하세요"
+                      value={confirmPassword}
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      disabled={isLoading}
+                      required
+                    />
+                  </div>
                   {error && <p className="text-xs text-red-600">{error}</p>}
                   <Button type="submit" disabled={!canSubmit || isLoading} className="w-full h-12" size="lg">
-                    <Mail className="w-5 h-5 mr-2" />
-                    {isLoading ? "로그인 중..." : "이메일로 로그인"}
+                    <UserPlus className="w-5 h-5 mr-2" />
+                    {isLoading ? "처리 중..." : "인증 코드 받기"}
                   </Button>
                 </form>
 
                 <div className="text-center text-xs text-muted-foreground">
-                  계정이 없나요?{" "}
-                  <Link href="/auth/sign-up" className="underline">
-                    회원가입
+                  이미 계정이 있나요?{" "}
+                  <Link href="/auth/sign-in" className="underline">
+                    로그인
                   </Link>
                 </div>
               </div>
@@ -308,7 +269,7 @@ export default function SignInPage() {
 
       <footer className="flex-shrink-0 px-6 py-4 text-center">
         <p className="text-xs text-muted-foreground">
-          로그인은 <span className="underline cursor-pointer">이용약관</span> 및{" "}
+          회원가입은 <span className="underline cursor-pointer">이용약관</span> 및{" "}
           <span className="underline cursor-pointer">개인정보 처리방침</span>에 동의하는 것으로 간주됩니다.
         </p>
       </footer>

@@ -195,3 +195,53 @@ export function parseIdToken(idToken: string): { sub: string; email: string; nam
     return null
   }
 }
+
+type CognitoCodeDeliveryDetails = {
+  destination?: string
+  deliveryMedium?: string
+  attributeName?: string
+}
+
+export type CognitoSignUpResult = {
+  userSub: string | null
+  userConfirmed: boolean
+  codeDeliveryDetails?: CognitoCodeDeliveryDetails | null
+}
+
+async function postJson<T>(url: string, body: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  })
+
+  let data: T | { message?: string; name?: string } | null = null
+  try {
+    data = (await response.json()) as T
+  } catch {
+    data = null
+  }
+
+  if (!response.ok) {
+    const hasErrorPayload = data && typeof data === "object"
+    const errorMessage =
+      hasErrorPayload && "message" in data && data.message ? data.message : "요청에 실패했어요."
+    const error = new Error(errorMessage)
+    if (hasErrorPayload && "name" in data && data.name) {
+      error.name = data.name
+    }
+    throw error
+  }
+
+  return data as T
+}
+
+export async function signUp(email: string, password: string): Promise<CognitoSignUpResult> {
+  return postJson<CognitoSignUpResult>("/api/auth/sign-up", { email, password })
+}
+
+export async function confirmSignUp(email: string, code: string): Promise<void> {
+  await postJson<{ success: true }>("/api/auth/confirm-sign-up", { email, code })
+}
