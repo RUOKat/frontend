@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { exchangeCodeForTokens } from "@/lib/cognito"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function CallbackPage() {
   const router = useRouter()
   const sp = useSearchParams()
+  const { login } = useAuth()
 
   const code = useMemo(() => sp.get("code"), [sp])
   const error = useMemo(() => sp.get("error"), [sp])
@@ -63,18 +65,18 @@ export default function CallbackPage() {
         return
       }
 
-      try {
-        sessionStorage.setItem("access_token", tokens.accessToken)
-        sessionStorage.setItem("id_token", tokens.idToken)
-        sessionStorage.setItem("refresh_token", tokens.refreshToken)
-      } catch {}
+      login(null, {
+        accessToken: tokens.accessToken,
+        idToken: tokens.idToken,
+        refreshToken: tokens.refreshToken,
+      })
 
       setStatus("success")
       setMessage("로그인 완료! 이동 중입니다...")
 
       router.replace("/onboarding/cat")
     })()
-  }, [code, error, errorDescription, router])
+  }, [code, error, errorDescription, login, router])
 
   return (
     <main className="min-h-screen flex items-center justify-center p-6">

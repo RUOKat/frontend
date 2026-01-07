@@ -113,7 +113,8 @@ export interface AuthState {
 
 export interface User {
   id: string
-  email: string
+  sub?: string
+  email?: string
   name?: string
 }
 
