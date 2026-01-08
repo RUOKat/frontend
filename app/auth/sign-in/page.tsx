@@ -5,17 +5,6 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/contexts/auth-context"
@@ -48,17 +37,13 @@ export default function SignInPage() {
   const router = useRouter()
   const { login, mockLogin } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
-  const [agreeTerms, setAgreeTerms] = useState(false)
-  const [agreePrivacy, setAgreePrivacy] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const cognitoEnabled = isCognitoConfigured()
-  const canContinue = agreeTerms && agreePrivacy
-  const canSubmit = canContinue && email.trim().length > 0 && password.length > 0
+  const canSubmit = email.trim().length > 0 && password.length > 0
 
   const handleGoogleLogin = async () => {
-    if (!canContinue) return
     setIsLoading(true)
     setError(null)
     try {
@@ -72,7 +57,6 @@ export default function SignInPage() {
 
   const handlePasswordLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!canContinue) return
 
     const trimmedEmail = email.trim()
     if (!trimmedEmail || !password) {
@@ -129,7 +113,6 @@ export default function SignInPage() {
   }
 
   const handleMockLogin = () => {
-    if (!canContinue) return
     setIsLoading(true)
     setError(null)
     mockLogin()
@@ -159,95 +142,8 @@ export default function SignInPage() {
             <CardDescription>고양이 건강 기록을 시작해보세요</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
-              <div className="flex items-start gap-2">
-                <Checkbox
-                  id="agreeTerms"
-                  checked={agreeTerms}
-                  onCheckedChange={(checked) => setAgreeTerms(checked === true)}
-                  className="mt-0.5"
-                />
-                <div className="flex-1 space-y-1">
-                  <Label htmlFor="agreeTerms" className="text-sm leading-relaxed">
-                    서비스 이용약관 동의(필수)
-                  </Label>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs">
-                        내용 보기
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>서비스 이용약관</DialogTitle>
-                        <DialogDescription>
-                          서비스 이용약관의 주요 내용을 안내합니다. 자세한 내용은 추후 업데이트됩니다.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <DialogFooter>
-                        <DialogClose asChild>
-                          <Button type="button">확인</Button>
-                        </DialogClose>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2">
-                <Checkbox
-                  id="agreePrivacy"
-                  checked={agreePrivacy}
-                  onCheckedChange={(checked) => setAgreePrivacy(checked === true)}
-                  className="mt-0.5"
-                />
-                <div className="flex-1 space-y-1">
-                  <Label htmlFor="agreePrivacy" className="text-sm leading-relaxed">
-                    개인정보 수집·이용 동의(필수)
-                  </Label>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs">
-                        내용 보기
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>개인정보 수집·이용 안내</DialogTitle>
-                        <DialogDescription>
-                          입력하신 정보는 기록 및 헬스 체크 경험 제공을 위해 사용됩니다.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <DialogFooter>
-                        <DialogClose asChild>
-                          <Button type="button">확인</Button>
-                        </DialogClose>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-            </div>
-
             {cognitoEnabled ? (
               <div className="space-y-4">
-                <Button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  disabled={!canContinue || isLoading}
-                  className="w-full h-12"
-                  size="lg"
-                >
-                  <Chrome className="w-5 h-5 mr-2" />
-                  {isLoading ? "로그인 중..." : "Google로 계속하기"}
-                </Button>
-
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="h-px flex-1 bg-border" />
-                  <span>또는</span>
-                  <span className="h-px flex-1 bg-border" />
-                </div>
-
                 <form onSubmit={handlePasswordLogin} className="space-y-3">
                   <div className="space-y-2">
                     <Label htmlFor="email">이메일</Label>
@@ -282,6 +178,23 @@ export default function SignInPage() {
                   </Button>
                 </form>
 
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span className="h-px flex-1 bg-border" />
+                  <span>또는</span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={isLoading}
+                  className="w-full h-12"
+                  size="lg"
+                >
+                  <Chrome className="w-5 h-5 mr-2" />
+                  {isLoading ? "로그인 중..." : "Google로 계속하기"}
+                </Button>
+
                 <div className="text-center text-xs text-muted-foreground">
                   계정이 없나요?{" "}
                   <Link href="/auth/sign-up" className="underline">
@@ -290,7 +203,7 @@ export default function SignInPage() {
                 </div>
               </div>
             ) : (
-              <Button onClick={handleMockLogin} disabled={!canContinue || isLoading} className="w-full h-12" size="lg">
+              <Button onClick={handleMockLogin} disabled={isLoading} className="w-full h-12" size="lg">
                 <Zap className="w-5 h-5 mr-2" />
                 {isLoading ? "로그인 중..." : "개발용 빠른 로그인"}
               </Button>

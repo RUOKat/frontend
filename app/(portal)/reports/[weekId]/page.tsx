@@ -77,61 +77,6 @@ export default function WeeklyReportDetailPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">지표별 요약</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {Object.entries(detail.metrics).map(([label, value]) => (
-              <div key={label} className="rounded-lg border border-border bg-muted/30 p-3">
-                <p className="text-xs text-muted-foreground mb-1">{label}</p>
-                <p className="text-sm text-foreground">{value}</p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">추천 행동</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              {detail.recommendations.map((item) => (
-                <li key={item}>• {item}</li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-
-        {detail.sources && detail.sources.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">관련 읽을거리</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {detail.sources.map((source) => (
-                <button
-                  key={source.url}
-                  type="button"
-                  onClick={() => window.open(source.url, "_blank", "noopener,noreferrer")}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-left transition hover:bg-muted/50"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium text-foreground">{source.title}</p>
-                      <p className="text-xs text-muted-foreground">{source.publisher}</p>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      외부에서 보기
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </CardContent>
-          </Card>
-        )}
       </main>
     </div>
   )

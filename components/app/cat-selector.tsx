@@ -10,6 +10,73 @@ import { useActiveCat } from "@/contexts/active-cat-context"
 import type { CatProfile } from "@/lib/types"
 import { Cat, Check, ChevronDown, PlusCircle } from "lucide-react"
 
+type DateParts = {
+  year: number
+  month: number
+  day: number
+}
+
+type AgeParts = {
+  years: number
+  months: number
+}
+
+function parseDateParts(value?: string | number | null): DateParts | null {
+  if (value == null) return null
+  if (typeof value === "number") {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return null
+    return { year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() }
+  }
+  const match = value.match(/(\d{4})[-.](\d{1,2})[-.](\d{1,2})/)
+  if (!match) return null
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  if (!year || !month || !day) return null
+  return { year, month, day }
+}
+
+function formatDateLabel(value?: string | number | null): string {
+  const parts = parseDateParts(value)
+  if (!parts) return ""
+  const pad = (input: number) => String(input).padStart(2, "0")
+  return `${parts.year}.${pad(parts.month)}.${pad(parts.day)}`
+}
+
+function getAgePartsFromBirthDate(value?: string | null): AgeParts | null {
+  const parts = parseDateParts(value)
+  if (!parts) return null
+  const birth = new Date(parts.year, parts.month - 1, parts.day)
+  if (Number.isNaN(birth.getTime())) return null
+  const today = new Date()
+  let years = today.getFullYear() - birth.getFullYear()
+  let months = today.getMonth() - birth.getMonth()
+  if (today.getDate() < birth.getDate()) {
+    months -= 1
+  }
+  if (months < 0) {
+    years -= 1
+    months += 12
+  }
+  if (years < 0) return null
+  return { years, months }
+}
+
+function getAgePartsFromMonths(totalMonths?: number | null): AgeParts | null {
+  if (totalMonths == null) return null
+  const safeMonths = Math.max(0, Math.floor(totalMonths))
+  if (safeMonths === 0) return null
+  return { years: Math.floor(safeMonths / 12), months: safeMonths % 12 }
+}
+
+function formatAgeParts(parts: AgeParts): string {
+  if (parts.years <= 0 && parts.months <= 0) return ""
+  if (parts.years <= 0) return `만 ${parts.months}개월`
+  if (parts.months <= 0) return `만 ${parts.years}세`
+  return `만 ${parts.years}세 ${parts.months}개월`
+}
+
 function getAgeLabel({
   birthDate,
   estimatedAge,
@@ -68,23 +135,30 @@ export function CatSelector({ embedded = false, primaryAction = "select" }: CatS
     return parts.join(" · ")
   }, [activeCat])
 
-  const ageLabel = useMemo(() => {
+  const birthdayLine = useMemo(() => {
     if (!activeCat) return ""
-    return getAgeLabel({
-      birthDate: activeCat.birthDate,
-      estimatedAge: activeCat.estimatedAge,
-      unknownBirthday: activeCat.unknownBirthday,
-    })
+    const birthDateLabel = formatDateLabel(activeCat.birthDate)
+    const ageParts = getAgePartsFromBirthDate(activeCat.birthDate)
+    const ageLabel = ageParts ? formatAgeParts(ageParts) : ""
+    const estimatedParts =
+      !birthDateLabel && activeCat.estimatedAge != null ? getAgePartsFromMonths(activeCat.estimatedAge) : null
+    const estimatedLabel = estimatedParts ? formatAgeParts(estimatedParts) : ""
+    let baseLabel = ""
+    if (birthDateLabel) {
+      baseLabel = `🎂 태어난 날 ${birthDateLabel}${ageLabel ? ` (${ageLabel})` : ""}`
+    } else if (estimatedLabel) {
+      baseLabel = `🎂 태어난 날 미상 (추정 ${estimatedLabel})`
+    } else {
+      baseLabel = "🎂 태어난 날 정보 없음"
+    }
+    return baseLabel
   }, [activeCat])
 
-  const extraLine = useMemo(() => {
+  const familyLine = useMemo(() => {
     if (!activeCat) return ""
-    const parts = [
-      ageLabel ? `나이 ${ageLabel}` : null,
-      activeCat.weight ? `체중 ${activeCat.weight}kg` : null,
-    ].filter(Boolean)
-    return parts.join(" · ")
-  }, [activeCat, ageLabel])
+    const familyDateLabel = formatDateLabel(activeCat.familyDate ?? activeCat.adoptionDate)
+    return familyDateLabel ? `🏠 가족이 된 날 ${familyDateLabel}` : "🏠 가족이 된 날 정보 없음"
+  }, [activeCat])
 
   const handleSelect = (catId: string) => {
     setActiveCatId(catId)
@@ -170,18 +244,19 @@ export function CatSelector({ embedded = false, primaryAction = "select" }: CatS
                 <Cat className="w-8 h-8 text-primary" />
               )}
             </div>
-          <div className="flex-1 min-w-0">
-            {detailLine ? (
-              <p className="text-sm font-medium text-foreground truncate">{detailLine}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground">기본 정보 없음</p>
-            )}
-            {extraLine ? (
-              <p className="text-xs text-muted-foreground">{extraLine}</p>
-            ) : (
-              <p className="text-xs text-muted-foreground">나이/체중 정보 없음</p>
-            )}
-          </div>
+            <div className="flex-1 min-w-0">
+              {detailLine ? (
+                <p className="text-sm font-medium text-foreground truncate">{detailLine}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground">기본 정보 없음</p>
+              )}
+              {birthdayLine ? (
+                <p className="text-xs text-muted-foreground">{birthdayLine}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">🎂 태어난 날 정보 없음</p>
+              )}
+              {familyLine ? <p className="text-xs text-muted-foreground">{familyLine}</p> : null}
+            </div>
           </button>
           <button
             type="button"

@@ -5,6 +5,20 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { exchangeCodeForTokens } from "@/lib/cognito"
 import { useAuth } from "@/contexts/auth-context"
 
+function parseJwtPayload(idToken: string): { sub?: string; email?: string; name?: string } | null {
+  try {
+    const base64Url = idToken.split(".")[1]
+    if (!base64Url) return null
+
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/")
+    const padded = base64 + "===".slice((base64.length + 3) % 4)
+
+    return JSON.parse(atob(padded))
+  } catch {
+    return null
+  }
+}
+
 export default function CallbackPage() {
   const router = useRouter()
   const sp = useSearchParams()
@@ -65,7 +79,17 @@ export default function CallbackPage() {
         return
       }
 
-      login(null, {
+      const payload = tokens.idToken ? parseJwtPayload(tokens.idToken) : null
+      const user =
+        payload && payload.sub
+          ? {
+              id: payload.sub,
+              email: payload.email,
+              name: payload.name,
+            }
+          : null
+
+      login(user, {
         accessToken: tokens.accessToken,
         idToken: tokens.idToken,
         refreshToken: tokens.refreshToken,

@@ -11,6 +11,8 @@ import { getTokens } from "@/lib/backend"
 interface AuthContextType extends AuthState {
   backendSync: BackendSyncStatus
   login: (user: User | null, tokens?: SessionTokens) => void
+  updateUser: (updates: Partial<User>) => void
+  clearLocalAuth: () => void
   logout: () => void
   mockLogin: () => void
   isLoading: boolean
@@ -119,9 +121,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const refreshToken =
           tokens?.refreshToken ?? (typeof window !== "undefined" ? sessionStorage.getItem("refresh_token") : null)
 
+        const storedAuth = loadAuth<AuthState>()
+        const storedUser = storedAuth?.user
+        const mergedUser = storedUser ? { ...user, ...storedUser } : user
         const newState: AuthState = {
           isAuthenticated: true,
-          user,
+          user: mergedUser,
           accessToken: accessToken ?? null,
           idToken: idToken ?? null,
           refreshToken: refreshToken ?? null,
@@ -265,6 +270,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [syncSession],
   )
 
+  const updateUser = useCallback((updates: Partial<User>) => {
+    setAuthState((prev) => {
+      if (!prev.user) return prev
+      const nextUser = { ...prev.user, ...updates }
+      const nextState = { ...prev, user: nextUser }
+      saveAuth(nextState)
+      return nextState
+    })
+  }, [])
+
+  const clearLocalAuth = useCallback(() => {
+    const newState: AuthState = {
+      isAuthenticated: false,
+      user: null,
+      accessToken: null,
+      idToken: null,
+      refreshToken: null,
+    }
+    setAuthState(newState)
+    clearAuth()
+    clearSessionTokens()
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("access_token")
+        localStorage.removeItem("id_token")
+        localStorage.removeItem("refresh_token")
+      } catch {}
+    }
+  }, [])
+
   const logout = useCallback(() => {
     const newState: AuthState = {
       isAuthenticated: false,
@@ -307,11 +342,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ...authState,
       backendSync,
       login,
+      updateUser,
+      clearLocalAuth,
       logout,
       mockLogin,
       isLoading,
     }),
-    [authState, backendSync, login, logout, mockLogin, isLoading],
+    [authState, backendSync, login, updateUser, clearLocalAuth, logout, mockLogin, isLoading],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

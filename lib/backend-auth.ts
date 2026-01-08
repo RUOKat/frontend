@@ -17,13 +17,20 @@ type BackendMeResponse = {
 type MeResponse = User | { user: User } | BackendMeResponse
 
 export async function getMe(): Promise<MeResponse | null> {
-  return backendFetch<MeResponse>("/auth/me", {
-    method: "GET",
-    cache: "no-store",
-    headers: {
-      "Cache-Control": "no-cache",
-      Pragma: "no-cache",
-    },
-    allowNotModified: true,
-  })
+  try {
+    return await backendFetch<MeResponse>("/auth/me", {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+      },
+      allowNotModified: true,
+    })
+  } catch (error) {
+    if (error instanceof TypeError) {
+      return null
+    }
+    throw error
+  }
 }

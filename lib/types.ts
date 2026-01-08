@@ -31,6 +31,8 @@ export interface CatProfile {
   careShareStartAt?: number
   careShareEndAt?: number
   birthDate?: string // ISO string
+  familyDate?: string // ISO string
+  adoptionDate?: string // ISO string
   estimatedAge?: number // 개월 수
   unknownBirthday: boolean
   gender: "male" | "female"
@@ -116,6 +118,8 @@ export interface User {
   sub?: string
   email?: string
   name?: string
+  phone?: string
+  profilePhoto?: string
 }
 
 // 기록 타입

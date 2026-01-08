@@ -8,44 +8,21 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { useAuth } from "@/contexts/auth-context"
-import { CatSelector } from "@/components/app/cat-selector"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
 import {
   Bell,
-  Camera,
   Cat,
-  ChevronRight,
-  ClipboardList,
-  FileText,
   LogOut,
-  PlusCircle,
-  Share2,
   Settings,
   ShieldCheck,
-  Trash2,
   User,
 } from "lucide-react"
-
-const shareLevelLabel = {
-  signal: "상태 신호만",
-  summary: "상태 요약",
-  full: "원문 응답 포함",
-} as const
-
-function formatDate(timestamp?: number) {
-  if (!timestamp) return ""
-  const date = new Date(timestamp)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  return `${year}.${month}.${day}`
-}
 
 export default function SettingsPage() {
   const { user } = useAuth()
   const { activeCat, cats } = useActiveCat()
-  const { shelterShareOptIn, shareLevel } = useOnboarding()
+  const { shelterShareOptIn } = useOnboarding()
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [alertPriority, setAlertPriority] = useState("important")
 
@@ -64,7 +41,6 @@ export default function SettingsPage() {
         adoptionPathLabel.includes("agency") ||
         adoptionPathLabel.includes("shelter")))
 
-  const careShareStartAt = activeCat?.careShareStartAt
   const careShareEndAt =
     activeCat?.dataSharing?.expiresAt ? new Date(activeCat.dataSharing.expiresAt).getTime() : activeCat?.careShareEndAt
   const now = Date.now()
@@ -73,65 +49,9 @@ export default function SettingsPage() {
     activeCat?.dataSharing?.enabled != null
       ? activeCat.dataSharing.enabled && !isSharePeriodExpired
       : (isAgencyAdoption && !isSharePeriodExpired) || shelterShareOptIn
-  const shareStatusLabel = isSharePeriodExpired ? "종료됨" : shareActive ? "공유 중" : "선택 안 함"
-  const shareRangeLabel = shareActive ? shareLevelLabel[shareLevel] : "미설정"
-  const carePeriodLabel =
-    isAgencyAdoption && careShareStartAt && careShareEndAt
-      ? `${formatDate(careShareStartAt)} ~ ${formatDate(careShareEndAt)}`
-      : isAgencyAdoption
-        ? "1년 공동 케어"
-        : "기본 제공"
-
-  const catManagementItems = [
-    {
-      icon: Cat,
-      label: "고양이 프로필 보기/수정",
-      description: activeCat?.name ? `${activeCat.name} 프로필` : "프로필 설정",
-      href: "/onboarding/cat",
-    },
-    {
-      icon: PlusCircle,
-      label: "고양이 추가/전환",
-      description: "멀티캣 기능 준비 중",
-      href: "/onboarding/cat?mode=new",
-    },
-  ]
-
-  const careItems = [
-    {
-      icon: ClipboardList,
-      label: "병원 방문 기록",
-      description: "방문 기록 정리",
-      href: "/vet-history",
-    },
-    {
-      icon: FileText,
-      label: "리포트",
-      description: "상태 요약 리포트",
-      href: "/report",
-    },
-    {
-      icon: Camera,
-      label: "웹캠 모니터링",
-      description: "실시간 관찰",
-      href: "/webcam",
-    },
-  ]
-
-  const accountItems = [
-    {
-      icon: ShieldCheck,
-      label: "개인정보 처리 안내",
-      description: "수집·이용 및 보관 정책",
-      href: "/settings#privacy",
-    },
-    {
-      icon: Trash2,
-      label: "계정 삭제 요청",
-      description: "요청 접수 안내",
-      href: "/settings#account-delete",
-    },
-  ]
+  const alertStatusLabel = notificationsEnabled ? "켬" : "끔"
+  const coCareActive = shareActive
+  const coCareStatusLabel = coCareActive ? "참여 중" : "미참여"
 
   return (
     <div className="min-h-screen bg-background">
@@ -193,59 +113,81 @@ export default function SettingsPage() {
           <CardContent className="py-4 space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="w-6 h-6 text-primary" />
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                  {user?.profilePhoto ? (
+                    <img src={user.profilePhoto} alt={`${user?.name || "집사님"} 프로필`} className="h-full w-full object-cover" />
+                  ) : (
+                    <User className="w-6 h-6 text-primary" />
+                  )}
                 </div>
                 <div>
                   <p className="text-lg font-semibold text-foreground">{user?.name || "집사님"}</p>
                   <p className="text-base text-muted-foreground">{user?.email || "demo@areyouokat.com"}</p>
                 </div>
               </div>
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="default" className="text-base">
-                    프로필 편집
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="bottom" className="bg-card text-card-foreground">
-                  <SheetHeader>
-                    <SheetTitle>집사님 프로필</SheetTitle>
-                  </SheetHeader>
-                  <div className="px-4 pb-6 space-y-2">
-                    {accountItems.map((item) => (
-                      <Link key={item.label} href={item.href}>
-                        <Card className="hover:bg-muted/50 transition-colors">
-                          <CardContent className="py-3 px-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                                  <item.icon className="w-5 h-5 text-muted-foreground" />
-                                </div>
-                                <div>
-                                  <p className="font-medium text-sm">{item.label}</p>
-                                  <p className="text-xs text-muted-foreground">{item.description}</p>
-                                </div>
-                              </div>
-                              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    ))}
-                  </div>
-                </SheetContent>
-              </Sheet>
+              <Button asChild variant="outline" size="default" className="text-base">
+                <Link href="/settings/profile">프로필 편집</Link>
+              </Button>
             </div>
 
-            <div className="grid gap-2 text-sm text-muted-foreground">
-              <div className="flex items-center justify-between">
-                <span>로그인 방식</span>
-                <span className="text-foreground text-sm">{loginMethodLabel}</span>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
+                    <User className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">로그인 방식</p>
+                  </div>
+                </div>
+                <span className="rounded-full border border-border bg-background px-2 py-1 text-xs font-medium text-foreground">
+                  {loginMethodLabel}
+                </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span>연결된 고양이</span>
-                <span className="text-foreground text-sm">{catCount}마리</span>
+
+              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
+                    <Cat className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">연결된 고양이</p>
+                  </div>
+                </div>
+                <span className="rounded-full border border-border bg-background px-2 py-1 text-xs font-medium text-foreground">
+                  {catCount}
+                </span>
               </div>
+
+              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
+                    <Bell className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">이상 신호 알림 받기</p>
+                  </div>
+                </div>
+                <span className="rounded-full border border-border bg-background px-2 py-1 text-xs font-medium text-foreground">
+                  {alertStatusLabel}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
+                    <ShieldCheck className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">공동 케어 참여</p>
+                    <p className="text-xs text-muted-foreground">입양 기관과 함께 관리</p>
+                  </div>
+                </div>
+                <span className="rounded-full border border-border bg-background px-2 py-1 text-xs font-medium text-foreground">
+                  {coCareStatusLabel}
+                </span>
+              </div>
+
             </div>
 
             <div className="border-t border-border/60 pt-4 space-y-2">
@@ -260,7 +202,6 @@ export default function SettingsPage() {
         </Card>
         <div className="text-center pt-2">
           <p className="text-xs text-muted-foreground">Are You Okat? v1.0.0</p>
-          <p className="text-xs text-muted-foreground mt-1">고양이 케어 기록 앱</p>
         </div>
       </main>
     </div>

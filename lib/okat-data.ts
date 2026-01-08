@@ -151,12 +151,12 @@ export function getMockWeeklyReportDetail(activeCatId: string | null | undefined
     id: report.id,
     rangeLabel: report.rangeLabel,
     status: report.status,
-    highlights: ["음수량 감소 패턴이 보입니다.", "배변 패턴이 하루 1회로 유지됐어요.", "활동량이 비교적 안정적입니다."],
+    highlights: ["음수량 감소 패턴이 보였어요.", "배변 패턴이 하루 1회로 유지됐어요.", "활동량이 비교적 안정적이었어요."],
     metrics: {
-      식욕: "최근 7일 평균 섭취량이 유지되고 있어요.",
+      식욕: "최근 7일 평균 섭취량이 유지됐어요.",
       음수: "평균 음수량이 약 8% 감소했어요.",
-      배변: "배변 횟수가 일정하며 큰 변화는 없어요.",
-      활동: "활동량 변동 폭이 크지 않아요.",
+      배변: "배변 횟수가 일정했고 큰 변화는 없었어요.",
+      활동: "활동량 변동 폭이 크지 않았어요.",
     },
     recommendations: ["물그릇 위치를 1~2곳 추가해 보세요.", "습식 비중을 조금 늘려 수분 섭취를 도울 수 있어요."],
     sources: [

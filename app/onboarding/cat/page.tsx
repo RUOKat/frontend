@@ -146,6 +146,7 @@ export default function CatProfilePage() {
   const [adoptionAgencyCode, setAdoptionAgencyCode] = useState("")
   const [unknownBirthday, setUnknownBirthday] = useState(false)
   const [birthDate, setBirthDate] = useState("")
+  const [familyDate, setFamilyDate] = useState("")
   const [estimatedAge, setEstimatedAge] = useState("")
   const [gender, setGender] = useState<"male" | "female" | "">("")
   const [neutered, setNeutered] = useState(true)
@@ -285,6 +286,7 @@ export default function CatProfilePage() {
     setAdoptionAgencyCode(activeCat.adoptionAgencyCode ?? activeCat.agencyCode ?? "")
     setUnknownBirthday(isUnknownBirthday)
     setBirthDate(isUnknownBirthday ? "" : activeCat.birthDate ?? "")
+    setFamilyDate(activeCat.familyDate ?? activeCat.adoptionDate ?? "")
     setEstimatedAge(isUnknownBirthday && activeCat.estimatedAge != null ? String(activeCat.estimatedAge) : "")
     setGender(activeCat.gender ?? "")
     setNeutered(activeCat.neutered ?? true)
@@ -409,6 +411,7 @@ export default function CatProfilePage() {
       agencyCode: isAgencyAdoption ? trimmedAgencyCode : undefined,
       unknownBirthday,
       birthDate: unknownBirthday ? undefined : birthDate,
+      familyDate: familyDate || undefined,
       estimatedAge: unknownBirthday ? Number.parseInt(estimatedAge, 10) : undefined,
       gender: gender as "male" | "female",
       neutered,
@@ -453,7 +456,6 @@ export default function CatProfilePage() {
             </div>
             <div>
               <h1 className="text-lg font-bold text-foreground">우리 고양이 프로필 만들기</h1>
-              <p className="text-xs text-muted-foreground">1단계 / 최대 3단계</p>
             </div>
           </div>
           <p className="text-sm text-muted-foreground mt-3">기준선을 만들면 작은 변화도 더 빨리 알아챌 수 있어요.</p>
@@ -566,6 +568,17 @@ export default function CatProfilePage() {
                 ) : (
                   <Input type="date" id="birthDate" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
                 )}
+              </div>
+
+              {/* 가족이 된 날 */}
+              <div className="space-y-2">
+                <Label htmlFor="familyDate">가족이 된 날</Label>
+                <Input
+                  type="date"
+                  id="familyDate"
+                  value={familyDate}
+                  onChange={(e) => setFamilyDate(e.target.value)}
+                />
               </div>
 
               {/* 성별 */}
