@@ -20,10 +20,9 @@ import {
 } from "lucide-react"
 
 export default function SettingsPage() {
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
   const { activeCat, cats } = useActiveCat()
   const { shelterShareOptIn } = useOnboarding()
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [alertPriority, setAlertPriority] = useState("important")
 
   const catCount = cats.length
@@ -49,6 +48,7 @@ export default function SettingsPage() {
     activeCat?.dataSharing?.enabled != null
       ? activeCat.dataSharing.enabled && !isSharePeriodExpired
       : (isAgencyAdoption && !isSharePeriodExpired) || shelterShareOptIn
+  const notificationsEnabled = user?.notificationsEnabled ?? true
   const alertStatusLabel = notificationsEnabled ? "켬" : "끔"
   const coCareActive = shareActive
   const coCareStatusLabel = coCareActive ? "참여 중" : "미참여"
@@ -81,7 +81,10 @@ export default function SettingsPage() {
                           <p className="text-xs text-muted-foreground">필요한 안내만 간단히 보내드려요.</p>
                         </div>
                       </div>
-                      <Switch checked={notificationsEnabled} onCheckedChange={setNotificationsEnabled} />
+                      <Switch
+                        checked={notificationsEnabled}
+                        onCheckedChange={(enabled) => updateUser({ notificationsEnabled: enabled })}
+                      />
                     </div>
 
                     <div className="flex items-center justify-between gap-4">

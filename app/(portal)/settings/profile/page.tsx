@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState, type ChangeEvent } from "react"
-import { KeyRound, Trash2, User } from "lucide-react"
+import { Bell, KeyRound, Trash2, User } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -26,15 +26,18 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { useAuth } from "@/contexts/auth-context"
 
 export default function UserProfileEditPage() {
   const router = useRouter()
   const { user, updateUser, accessToken, clearLocalAuth } = useAuth()
   const [name, setName] = useState("")
+  const [address, setAddress] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -49,9 +52,11 @@ export default function UserProfileEditPage() {
 
   useEffect(() => {
     setName(user?.name ?? "")
+    setAddress(user?.address ?? "")
     setEmail(user?.email ?? "")
     setPhone(user?.phone ?? "")
     setProfilePhoto(user?.profilePhoto ?? null)
+    setNotificationsEnabled(user?.notificationsEnabled ?? true)
   }, [user])
 
   const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -74,10 +79,17 @@ export default function UserProfileEditPage() {
     if (!user) return
     updateUser({
       name: name.trim() || user.name,
+      address: address.trim() || undefined,
       phone: phone.trim() || undefined,
       profilePhoto: profilePhoto || undefined,
     })
     router.push("/settings")
+  }
+
+  const handleNotificationsToggle = (enabled: boolean) => {
+    if (!user) return
+    setNotificationsEnabled(enabled)
+    updateUser({ notificationsEnabled: enabled })
   }
 
   const handleChangePassword = async () => {
@@ -213,6 +225,16 @@ export default function UserProfileEditPage() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="address">주소</Label>
+              <Input
+                id="address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="주소를 입력하세요"
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="email">이메일</Label>
               <Input id="email" value={email} disabled />
             </div>
@@ -233,6 +255,25 @@ export default function UserProfileEditPage() {
             <CardTitle className="text-base font-semibold">계정 관리</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
+            <Card className="hover:bg-muted/50 transition-colors">
+              <CardContent className="py-0.5 px-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
+                      <Bell className="w-3 h-3 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">이상 신호 알림 받기</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={notificationsEnabled}
+                    onCheckedChange={handleNotificationsToggle}
+                    aria-label="이상 신호 알림 받기"
+                  />
+                </div>
+              </CardContent>
+            </Card>
             <Dialog
               open={isPasswordOpen}
               onOpenChange={(open) => {
@@ -256,15 +297,14 @@ export default function UserProfileEditPage() {
                 }}
               >
                 <Card className="hover:bg-muted/50 transition-colors">
-                  <CardContent className="py-3 px-4">
+                  <CardContent className="py-0.5 px-2">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                          <KeyRound className="w-5 h-5 text-muted-foreground" />
+                      <div className="flex items-center gap-1">
+                        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
+                          <KeyRound className="w-3 h-3 text-muted-foreground" />
                         </div>
                         <div>
                           <p className="font-medium text-sm">비밀번호 변경</p>
-                          <p className="text-xs text-muted-foreground">현재 비밀번호 확인</p>
                         </div>
                       </div>
                     </div>
@@ -342,15 +382,14 @@ export default function UserProfileEditPage() {
                 }}
               >
                 <Card className="hover:bg-muted/50 transition-colors">
-                  <CardContent className="py-3 px-4">
+                  <CardContent className="py-0.5 px-2">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                          <Trash2 className="w-5 h-5 text-muted-foreground" />
+                      <div className="flex items-center gap-1">
+                        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
+                          <Trash2 className="w-3 h-3 text-muted-foreground" />
                         </div>
                         <div>
                           <p className="font-medium text-sm">계정 삭제</p>
-                          <p className="text-xs text-muted-foreground">삭제 후 복구 불가</p>
                         </div>
                       </div>
                     </div>

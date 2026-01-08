@@ -118,6 +118,8 @@ export interface User {
   sub?: string
   email?: string
   name?: string
+  address?: string
+  notificationsEnabled?: boolean
   phone?: string
   profilePhoto?: string
 }

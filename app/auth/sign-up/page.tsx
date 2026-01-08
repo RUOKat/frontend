@@ -124,76 +124,6 @@ export default function SignUpPage() {
             <CardDescription>이메일로 계정을 만들어보세요</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
-              <div className="flex items-start gap-2">
-                <Checkbox
-                  id="agreeTerms"
-                  checked={agreeTerms}
-                  onCheckedChange={(checked) => setAgreeTerms(checked === true)}
-                  className="mt-0.5"
-                />
-                <div className="flex-1 space-y-1">
-                  <Label htmlFor="agreeTerms" className="text-sm leading-relaxed">
-                    서비스 이용약관 동의(필수)
-                  </Label>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs">
-                        내용 보기
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>서비스 이용약관</DialogTitle>
-                        <DialogDescription>
-                          서비스 이용약관의 주요 내용을 안내합니다. 자세한 내용은 추후 업데이트됩니다.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <DialogFooter>
-                        <DialogClose asChild>
-                          <Button type="button">확인</Button>
-                        </DialogClose>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2">
-                <Checkbox
-                  id="agreePrivacy"
-                  checked={agreePrivacy}
-                  onCheckedChange={(checked) => setAgreePrivacy(checked === true)}
-                  className="mt-0.5"
-                />
-                <div className="flex-1 space-y-1">
-                  <Label htmlFor="agreePrivacy" className="text-sm leading-relaxed">
-                    개인정보 수집·이용 동의(필수)
-                  </Label>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs">
-                        내용 보기
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>개인정보 수집·이용 안내</DialogTitle>
-                        <DialogDescription>
-                          입력하신 정보는 기록 및 헬스 체크 경험 제공을 위해 사용됩니다.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <DialogFooter>
-                        <DialogClose asChild>
-                          <Button type="button">확인</Button>
-                        </DialogClose>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-            </div>
-
             {cognitoEnabled ? (
               <div className="space-y-4">
                 <form onSubmit={handleSignUp} className="space-y-3">
@@ -237,6 +167,75 @@ export default function SignUpPage() {
                     />
                   </div>
                   {error && <p className="text-xs text-red-600">{error}</p>}
+                  <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
+                    <div className="flex items-start gap-2">
+                      <Checkbox
+                        id="agreeTerms"
+                        checked={agreeTerms}
+                        onCheckedChange={(checked) => setAgreeTerms(checked === true)}
+                        className="mt-0.5"
+                      />
+                      <div className="flex-1 flex items-center justify-between gap-3">
+                        <Label htmlFor="agreeTerms" className="text-sm leading-relaxed">
+                          서비스 이용약관 동의(필수)
+                        </Label>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs">
+                              내용 보기
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>서비스 이용약관</DialogTitle>
+                              <DialogDescription>
+                                서비스 이용약관의 주요 내용을 안내합니다. 자세한 내용은 추후 업데이트됩니다.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                              <DialogClose asChild>
+                                <Button type="button">확인</Button>
+                              </DialogClose>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-2">
+                      <Checkbox
+                        id="agreePrivacy"
+                        checked={agreePrivacy}
+                        onCheckedChange={(checked) => setAgreePrivacy(checked === true)}
+                        className="mt-0.5"
+                      />
+                      <div className="flex-1 flex items-center justify-between gap-3">
+                        <Label htmlFor="agreePrivacy" className="text-sm leading-relaxed">
+                          개인정보 수집·이용 동의(필수)
+                        </Label>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs">
+                              내용 보기
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>개인정보 수집·이용 안내</DialogTitle>
+                              <DialogDescription>
+                                입력하신 정보는 기록 및 헬스 체크 경험 제공을 위해 사용됩니다.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                              <DialogClose asChild>
+                                <Button type="button">확인</Button>
+                              </DialogClose>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    </div>
+                  </div>
                   <Button type="submit" disabled={!canSubmit || isLoading} className="w-full h-12" size="lg">
                     <UserPlus className="w-5 h-5 mr-2" />
                     {isLoading ? "처리 중..." : "인증 코드 받기"}
@@ -267,12 +266,7 @@ export default function SignUpPage() {
         </div>
       </main>
 
-      <footer className="flex-shrink-0 px-6 py-4 text-center">
-        <p className="text-xs text-muted-foreground">
-          회원가입은 <span className="underline cursor-pointer">이용약관</span> 및{" "}
-          <span className="underline cursor-pointer">개인정보 처리방침</span>에 동의하는 것으로 간주됩니다.
-        </p>
-      </footer>
+      <footer className="flex-shrink-0 px-6 py-4 text-center" />
     </div>
   )
 }
