@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState, type ChangeEvent } from "react"
-import { Bell, KeyRound, Trash2, User } from "lucide-react"
+import { Bell, KeyRound, Share2, ShieldCheck, Trash2, User } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -28,10 +28,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { useAuth } from "@/contexts/auth-context"
+import { useActiveCat } from "@/contexts/active-cat-context"
 
 export default function UserProfileEditPage() {
   const router = useRouter()
   const { user, updateUser, accessToken, clearLocalAuth } = useAuth()
+  const { activeCat } = useActiveCat()
   const [name, setName] = useState("")
   const [address, setAddress] = useState("")
   const [email, setEmail] = useState("")
@@ -49,6 +51,34 @@ export default function UserProfileEditPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
+
+  // 케어 공유 관련 상태 계산
+  const adoptionPathLabel = activeCat?.adoptionPath?.toLowerCase() ?? ""
+  const adoptionSource = activeCat?.adoptionSource
+  const hasAgencyCode = Boolean(activeCat?.agencyCode?.trim() || activeCat?.adoptionAgencyCode?.trim())
+  const isAgencyAdoption =
+    adoptionSource === "shelter" ||
+    adoptionSource === "agency" ||
+    (hasAgencyCode &&
+      (adoptionPathLabel.includes("보호소") ||
+        adoptionPathLabel.includes("입양기관") ||
+        adoptionPathLabel.includes("agency") ||
+        adoptionPathLabel.includes("shelter")))
+
+  const careShareEndAt =
+    activeCat?.dataSharing?.expiresAt ? new Date(activeCat.dataSharing.expiresAt).getTime() : activeCat?.careShareEndAt
+  const now = Date.now()
+  const isSharePeriodExpired = typeof careShareEndAt === "number" && careShareEndAt < now
+  const shareActive =
+    activeCat?.dataSharing?.enabled != null
+      ? activeCat.dataSharing.enabled && !isSharePeriodExpired
+      : (isAgencyAdoption && !isSharePeriodExpired)
+  const shareStatusLabel = isSharePeriodExpired ? "종료됨" : shareActive ? "공유 중" : "선택 안 함"
+  const shareRangeLabel = activeCat?.dataSharing?.required
+    ? "상태 신호만"
+    : activeCat?.dataSharing?.enabled
+      ? "상태 요약"
+      : "미설정"
 
   useEffect(() => {
     setName(user?.name ?? "")
@@ -274,6 +304,24 @@ export default function UserProfileEditPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* 케어 프로그램/기관 공유 섹션 */}
+            <Link href="/onboarding/consent">
+              <Card className="hover:bg-muted/50 transition-colors">
+                <CardContent className="py-0.5 px-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
+                        <ShieldCheck className="w-3 h-3 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">공동 케어 프로그램</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
             <Dialog
               open={isPasswordOpen}
               onOpenChange={(open) => {

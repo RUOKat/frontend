@@ -10,7 +10,7 @@ import { CatSelector } from "@/components/app/cat-selector"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
 import { getMockOkatSummary, getMockWeeklyReports, type OkatMetric, type OkatSummary, type WeeklyReport } from "@/lib/okat-data"
-import { Camera, ChevronDown, ChevronRight, ChevronUp, ClipboardList, Share2, ShieldCheck } from "lucide-react"
+import { Camera, ChevronRight, ClipboardList } from "lucide-react"
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 
 function formatDateTime(value?: string | null) {
@@ -45,7 +45,6 @@ export default function OkatDashboardPage() {
   const { riskStatus } = useOnboarding()
   const [summary, setSummary] = useState<OkatSummary | null>(null)
   const [weeklyReports, setWeeklyReports] = useState<WeeklyReport[]>([])
-  const [showAllWeeklyReports, setShowAllWeeklyReports] = useState(false)
 
   const summaryKey = useMemo(() => ["okatSummary", activeCatId], [activeCatId])
   const weeklyReportsKey = useMemo(() => ["weeklyReports", activeCatId], [activeCatId])
@@ -80,41 +79,6 @@ export default function OkatDashboardPage() {
       color: chartColors[index % chartColors.length],
     }
   })
-  const visibleWeeklyReports = showAllWeeklyReports ? weeklyReports : weeklyReports.slice(0, 1)
-
-  const adoptionPathLabel = activeCat?.adoptionPath?.toLowerCase() ?? ""
-  const adoptionSource = activeCat?.adoptionSource
-  const hasAgencyCode = Boolean(activeCat?.agencyCode?.trim() || activeCat?.adoptionAgencyCode?.trim())
-  const isAgencyAdoption =
-    adoptionSource === "shelter" ||
-    adoptionSource === "agency" ||
-    (hasAgencyCode &&
-      (adoptionPathLabel.includes("보호소") ||
-        adoptionPathLabel.includes("입양기관") ||
-        adoptionPathLabel.includes("agency") ||
-        adoptionPathLabel.includes("shelter")))
-
-  const careShareStartAt = activeCat?.careShareStartAt
-  const careShareEndAt =
-    activeCat?.dataSharing?.expiresAt ? new Date(activeCat.dataSharing.expiresAt).getTime() : activeCat?.careShareEndAt
-  const now = Date.now()
-  const isSharePeriodExpired = typeof careShareEndAt === "number" && careShareEndAt < now
-  const shareActive =
-    activeCat?.dataSharing?.enabled != null
-      ? activeCat.dataSharing.enabled && !isSharePeriodExpired
-      : (isAgencyAdoption && !isSharePeriodExpired)
-  const shareStatusLabel = isSharePeriodExpired ? "종료됨" : shareActive ? "공유 중" : "선택 안 함"
-  const shareRangeLabel = activeCat?.dataSharing?.required
-    ? "상태 신호만"
-    : activeCat?.dataSharing?.enabled
-      ? "상태 요약"
-      : "미설정"
-  const carePeriodLabel =
-    isAgencyAdoption && careShareStartAt && careShareEndAt
-      ? `${formatDateTime(String(careShareStartAt))} ~ ${formatDateTime(String(careShareEndAt))}`
-      : isAgencyAdoption
-        ? "1년 공동 케어"
-        : "기본 제공"
 
   const careItems = [
     {
@@ -231,15 +195,13 @@ export default function OkatDashboardPage() {
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-foreground">주간 리포트</h2>
             {weeklyReports.length > 1 && (
-              <button
-                type="button"
-                onClick={() => setShowAllWeeklyReports((prev) => !prev)}
+              <Link
+                href="/reports"
                 className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition"
-                aria-expanded={showAllWeeklyReports}
               >
-                {showAllWeeklyReports ? "접기" : "이전 리포트 보기"}
-                {showAllWeeklyReports ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </button>
+                이전 리포트 보기
+                <ChevronRight className="w-4 h-4" />
+              </Link>
             )}
           </div>
 
@@ -251,7 +213,8 @@ export default function OkatDashboardPage() {
             </Card>
           ) : (
             <div className="space-y-2">
-              {visibleWeeklyReports.map((report) => (
+              {/* 최신 리포트 1개만 표시 */}
+              {weeklyReports.slice(0, 1).map((report) => (
                 <Link key={report.id} href={`/reports/${report.id}`}>
                   <Card className="hover:bg-muted/40 transition-colors">
                     <CardContent className="py-1 px-4">
@@ -322,57 +285,6 @@ export default function OkatDashboardPage() {
               </CardContent>
             </Card>
           </Link>
-        </section>
-
-        <section className="space-y-3">
-          <h2 className="text-base font-semibold text-foreground">케어 프로그램/기관 공유</h2>
-          <Card>
-            <CardContent className="py-4 space-y-4">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                    <ShieldCheck className="w-5 h-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {isAgencyAdoption ? "입양 초기 공동 케어" : "기본 케어 흐름"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {isAgencyAdoption
-                        ? "입양 초기 1년간 함께 케어하는 기간입니다."
-                        : "지속적인 체크인과 기록을 기본으로 제공합니다."}
-                    </p>
-                  </div>
-                </div>
-                <span className="text-xs text-muted-foreground">{carePeriodLabel}</span>
-              </div>
-
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                    <Share2 className="w-5 h-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">기관 공유 상태</p>
-                    <p className="text-xs text-muted-foreground">원하시면 공유 범위를 조절할 수 있어요.</p>
-                  </div>
-                </div>
-                <span className="text-sm text-foreground">{shareStatusLabel}</span>
-              </div>
-
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>공유 범위</span>
-                <span className="text-foreground">{shareRangeLabel}</span>
-              </div>
-
-              <Link
-                href="/onboarding/consent"
-                className="inline-flex h-9 w-full items-center justify-center rounded-md border border-border bg-background px-3 text-sm font-medium transition-colors hover:bg-muted/50"
-              >
-                공유 설정 보기
-              </Link>
-            </CardContent>
-          </Card>
         </section>
       </main>
     </div>

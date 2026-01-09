@@ -12,12 +12,21 @@ import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
 import type { DataSharing, ShareLevel } from "@/lib/types"
 
-const CARE_MESSAGE =
-  "입양 초기 1년은 아이가 새 환경에 적응하며\n건강·행동 변화가 가장 많이 나타나는 시기예요.\nAre You Okat?은 사용자(집사)와 입양기관,\n그리고 필요 시 수의사가 같은 정보를 바탕으로\n더 빠르게 도울 수 있도록 ‘1년 동안만’ 기록을 공유해요."
+const CARE_MESSAGE_REQUIRED =
+  "입양 초기 1년은 아이가 새 환경에 적응하며\n건강·행동 변화가 가장 많이 나타나는 시기예요.\nAre You Okat?은 사용자(집사)와 입양기관,\n그리고 필요 시 수의사가 같은 정보를 바탕으로\n더 빠르게 도울 수 있도록 '1년 동안만' 기록을 공유해요."
 
-const CARE_BULLETS = [
-  "이 기능은 ‘감시’가 아니라 ‘공동 케어’ 목적이에요.",
+const CARE_MESSAGE_OPTIONAL =
+  "Are You Okat?은 필요할 때 전문가들과\n정보를 공유해서 더 나은 케어를 받을 수 있어요.\n언제든지 공유를 시작하거나 중단할 수 있으며,\n공유 범위도 자유롭게 조절할 수 있습니다."
+
+const CARE_BULLETS_REQUIRED = [
+  "이 기능은 '감시'가 아니라 '공동 케어' 목적이에요.",
   "공유는 입양 후 1년까지만 자동으로 적용돼요.",
+  "민감 정보는 최소화하고, 건강/행동 기록 중심으로 공유돼요.",
+]
+
+const CARE_BULLETS_OPTIONAL = [
+  "이 기능은 '감시'가 아니라 '선택적 케어 지원' 목적이에요.",
+  "언제든지 공유를 켜거나 끌 수 있어요.",
   "민감 정보는 최소화하고, 건강/행동 기록 중심으로 공유돼요.",
 ]
 
@@ -44,6 +53,11 @@ export default function ConsentNoticePage() {
     normalizedAdoptionPath.includes("입양기관") ||
     normalizedAdoptionPath.includes("agency") ||
     normalizedAdoptionPath.includes("shelter")
+
+  // 필수/선택에 따른 메시지 선택
+  const careMessage = isAgencyAdoption ? CARE_MESSAGE_REQUIRED : CARE_MESSAGE_OPTIONAL
+  const careBullets = isAgencyAdoption ? CARE_BULLETS_REQUIRED : CARE_BULLETS_OPTIONAL
+  const pageTitle = isAgencyAdoption ? "1년간 함께 케어하기" : "선택적 케어 지원"
 
   useEffect(() => {
     if (!activeCat) return
@@ -81,7 +95,7 @@ export default function ConsentNoticePage() {
   const applyDataSharing = (enabled: boolean, required: boolean) => {
     if (!activeCat) return
     const now = new Date()
-    const expiresAt = enabled ? buildOneYearLaterISO(now) : null
+    const expiresAt = enabled && isAgencyAdoption ? buildOneYearLaterISO(now) : null
     const nextDataSharing: DataSharing = {
       enabled,
       required,
@@ -92,7 +106,7 @@ export default function ConsentNoticePage() {
       ...activeCat,
       dataSharing: nextDataSharing,
       careShareStartAt: enabled ? now.getTime() : undefined,
-      careShareEndAt: enabled ? new Date(expiresAt || now.toISOString()).getTime() : undefined,
+      careShareEndAt: enabled && isAgencyAdoption ? new Date(expiresAt || now.toISOString()).getTime() : undefined,
       agencyCode: activeCat.agencyCode ?? activeCat.adoptionAgencyCode,
     })
 
@@ -128,7 +142,7 @@ export default function ConsentNoticePage() {
               <Info className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-foreground">1년간 함께 케어하기</h1>
+              <h1 className="text-lg font-bold text-foreground">{pageTitle}</h1>
             </div>
           </div>
         </div>
@@ -137,9 +151,9 @@ export default function ConsentNoticePage() {
       <main className="flex-1 px-6 pb-32 space-y-4">
         <Card>
           <CardContent className="pt-6 space-y-3">
-            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{CARE_MESSAGE}</p>
+            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{careMessage}</p>
             <ul className="list-disc pl-4 text-xs text-muted-foreground space-y-1">
-              {CARE_BULLETS.map((bullet) => (
+              {careBullets.map((bullet) => (
                 <li key={bullet}>{bullet}</li>
               ))}
             </ul>
@@ -156,7 +170,10 @@ export default function ConsentNoticePage() {
               />
               <div className="space-y-1">
                 <Label htmlFor="care-share-consent" className="text-sm font-medium leading-relaxed">
-                  위 내용을 이해했고 1년간 공유에 동의합니다
+                  {isAgencyAdoption 
+                    ? "위 내용을 이해했고 1년간 공유에 동의합니다"
+                    : "위 내용을 이해했고 선택적 공유에 동의합니다"
+                  }
                 </Label>
                 {isAgencyAdoption && (
                   <p className="text-xs text-muted-foreground">동의는 입양기관 입양 시 필수 항목입니다.</p>
@@ -165,11 +182,37 @@ export default function ConsentNoticePage() {
             </div>
 
             {isAgencyAdoption ? (
-              <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-                공유 범위: 상태 신호만(정상/주의/확인 필요 + 체크인 완료율)
-                <br />
-                더 상세한 공유는 추후 설정에서 선택할 수 있어요.
-              </div>
+              consentChecked && (
+                <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    공유 범위를 선택해 주세요. 기본은 상태 신호만입니다.
+                  </p>
+                  <RadioGroup
+                    value={shareLevel}
+                    onValueChange={(value) => setShareLevel(value as ShareLevel)}
+                    className="space-y-2"
+                  >
+                    <div className="flex items-start gap-2">
+                      <RadioGroupItem id="share-signal-required" value="signal" className="mt-1" />
+                      <Label htmlFor="share-signal-required" className="text-sm leading-relaxed">
+                        상태 신호만(정상/주의/확인 필요 + 체크인 완료율)
+                      </Label>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <RadioGroupItem id="share-summary-required" value="summary" className="mt-1" />
+                      <Label htmlFor="share-summary-required" className="text-sm leading-relaxed">
+                        상태 요약(변화 항목 요약 포함)
+                      </Label>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <RadioGroupItem id="share-full-required" value="full" className="mt-1" />
+                      <Label htmlFor="share-full-required" className="text-sm leading-relaxed">
+                        원문 응답 포함(가장 상세)
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              )
             ) : (
               consentChecked && (
                 <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">

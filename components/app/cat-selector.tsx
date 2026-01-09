@@ -160,6 +160,35 @@ export function CatSelector({ embedded = false, primaryAction = "select" }: CatS
     return familyDateLabel ? `🏠 가족이 된 날 ${familyDateLabel}` : "🏠 가족이 된 날 정보 없음"
   }, [activeCat])
 
+  const careShareLine = useMemo(() => {
+    if (!activeCat) return ""
+    
+    const isAgency = isAgencyAdoption(activeCat)
+    const isShareActive = activeCat.dataSharing?.enabled
+    
+    if (!isShareActive) return ""
+    
+    if (isAgency) {
+      // 필수 참여 대상: 기간 표시
+      const familyDate = activeCat.familyDate ?? activeCat.adoptionDate
+      if (!familyDate) return ""
+      
+      const startDate = new Date(familyDate)
+      if (Number.isNaN(startDate.getTime())) return ""
+      
+      const endDate = new Date(startDate)
+      endDate.setFullYear(endDate.getFullYear() + 1)
+      
+      const startLabel = formatDateLabel(familyDate)
+      const endLabel = formatDateLabel(endDate.toISOString())
+      
+      return `🛡️ 공동케어 기간 ${startLabel} ~ ${endLabel}`
+    } else {
+      // 선택적 참여 대상: 참여중 표시만
+      return `🛡️ 공동케어 참여중`
+    }
+  }, [activeCat])
+
   const handleSelect = (catId: string) => {
     setActiveCatId(catId)
     setOpen(false)
@@ -256,6 +285,7 @@ export function CatSelector({ embedded = false, primaryAction = "select" }: CatS
                 <p className="text-xs text-muted-foreground">🎂 태어난 날 정보 없음</p>
               )}
               {familyLine ? <p className="text-xs text-muted-foreground">{familyLine}</p> : null}
+              {careShareLine ? <p className="text-xs text-muted-foreground">{careShareLine}</p> : null}
             </div>
           </button>
           <button

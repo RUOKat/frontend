@@ -219,12 +219,7 @@ export default function SignInPage() {
         </div>
       </main>
 
-      <footer className="flex-shrink-0 px-6 py-4 text-center">
-        <p className="text-xs text-muted-foreground">
-          로그인은 <span className="underline cursor-pointer">이용약관</span> 및{" "}
-          <span className="underline cursor-pointer">개인정보 처리방침</span>에 동의하는 것으로 간주됩니다.
-        </p>
-      </footer>
+      <footer className="flex-shrink-0 px-6 py-4 text-center" />
     </div>
   )
 }
