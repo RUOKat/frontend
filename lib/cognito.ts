@@ -1,3 +1,5 @@
+import { sha256 as jsSha256 } from "js-sha256"
+
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 const region = process.env.NEXT_PUBLIC_AWS_REGION || ""
 const rawDomain = process.env.NEXT_PUBLIC_COGNITO_DOMAIN || ""
@@ -28,14 +30,12 @@ function generateRandomString(length: number): string {
   return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("")
 }
 
-async function sha256(plain: string): Promise<ArrayBuffer> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(plain)
-  return crypto.subtle.digest("SHA-256", data)
+function sha256(plain: string): Uint8Array {
+  return new Uint8Array(jsSha256.arrayBuffer(plain))
 }
 
-function base64urlencode(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer)
+function base64urlencode(buffer: ArrayBuffer | Uint8Array): string {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer)
   let binary = ""
   bytes.forEach((b) => (binary += String.fromCharCode(b)))
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
@@ -49,7 +49,7 @@ function decodeBase64Url(base64Url: string): string {
 
 export async function generatePKCE(): Promise<{ codeVerifier: string; codeChallenge: string }> {
   const codeVerifier = generateRandomString(64)
-  const hash = await sha256(codeVerifier)
+  const hash = sha256(codeVerifier)
   const codeChallenge = base64urlencode(hash)
 
   if (typeof window !== "undefined") {
@@ -225,12 +225,21 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
   }
 
   if (!response.ok) {
-    const hasErrorPayload = data && typeof data === "object"
-    const errorMessage =
-      hasErrorPayload && "message" in data && data.message ? data.message : "요청에 실패했어요."
+    let errorMessage = "요청에 실패했어요."
+    let errorName: string | undefined
+
+    if (data && typeof data === "object") {
+      if ("message" in data && typeof data.message === "string") {
+        errorMessage = data.message
+      }
+      if ("name" in data && typeof data.name === "string") {
+        errorName = data.name
+      }
+    }
+
     const error = new Error(errorMessage)
-    if (hasErrorPayload && "name" in data && data.name) {
-      error.name = data.name
+    if (errorName) {
+      error.name = errorName
     }
     throw error
   }
