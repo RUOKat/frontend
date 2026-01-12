@@ -44,25 +44,6 @@ function formatDateLabel(value?: string | number | null): string {
   return `${parts.year}.${pad(parts.month)}.${pad(parts.day)}`
 }
 
-function getAgePartsFromBirthDate(value?: string | null): AgeParts | null {
-  const parts = parseDateParts(value)
-  if (!parts) return null
-  const birth = new Date(parts.year, parts.month - 1, parts.day)
-  if (Number.isNaN(birth.getTime())) return null
-  const today = new Date()
-  let years = today.getFullYear() - birth.getFullYear()
-  let months = today.getMonth() - birth.getMonth()
-  if (today.getDate() < birth.getDate()) {
-    months -= 1
-  }
-  if (months < 0) {
-    years -= 1
-    months += 12
-  }
-  if (years < 0) return null
-  return { years, months }
-}
-
 function getAgePartsFromMonths(totalMonths?: number | null): AgeParts | null {
   if (totalMonths == null) return null
   const safeMonths = Math.max(0, Math.floor(totalMonths))
@@ -78,26 +59,14 @@ function formatAgeParts(parts: AgeParts): string {
 }
 
 function getAgeLabel({
-  birthDate,
   estimatedAge,
   unknownBirthday,
 }: {
-  birthDate?: string
   estimatedAge?: number
   unknownBirthday?: boolean
 }) {
-  if (unknownBirthday && !estimatedAge) return ""
-  if (estimatedAge) return `${estimatedAge}개월`
-  if (!birthDate) return ""
-
-  const birth = new Date(birthDate)
-  if (Number.isNaN(birth.getTime())) return ""
-  const today = new Date()
-  const months =
-    (today.getFullYear() - birth.getFullYear()) * 12 + (today.getMonth() - birth.getMonth())
-  if (months <= 0) return ""
-  if (months < 12) return `${months}개월`
-  return `${Math.floor(months / 12)}살`
+  if (!unknownBirthday || !estimatedAge) return ""
+  return `${estimatedAge}개월`
 }
 
 function isAgencyAdoption(cat: CatProfile): boolean {
@@ -138,14 +107,13 @@ export function CatSelector({ embedded = false, primaryAction = "select" }: CatS
   const birthdayLine = useMemo(() => {
     if (!activeCat) return ""
     const birthDateLabel = formatDateLabel(activeCat.birthDate)
-    const ageParts = getAgePartsFromBirthDate(activeCat.birthDate)
-    const ageLabel = ageParts ? formatAgeParts(ageParts) : ""
+    const hasExactBirthDate = Boolean(birthDateLabel) && !activeCat.unknownBirthday
     const estimatedParts =
-      !birthDateLabel && activeCat.estimatedAge != null ? getAgePartsFromMonths(activeCat.estimatedAge) : null
+      !hasExactBirthDate && activeCat.estimatedAge != null ? getAgePartsFromMonths(activeCat.estimatedAge) : null
     const estimatedLabel = estimatedParts ? formatAgeParts(estimatedParts) : ""
     let baseLabel = ""
-    if (birthDateLabel) {
-      baseLabel = `🎂 태어난 날 ${birthDateLabel}${ageLabel ? ` (${ageLabel})` : ""}`
+    if (hasExactBirthDate) {
+      baseLabel = `🎂 태어난 날 ${birthDateLabel}`
     } else if (estimatedLabel) {
       baseLabel = `🎂 태어난 날 미상 (추정 ${estimatedLabel})`
     } else {
@@ -319,7 +287,6 @@ export function CatSelector({ embedded = false, primaryAction = "select" }: CatS
           <div className="px-4 pb-4 space-y-2 max-h-[60vh] overflow-y-auto">
             {cats.map((cat) => {
               const ageLabel = getAgeLabel({
-                birthDate: cat.birthDate,
                 estimatedAge: cat.estimatedAge,
                 unknownBirthday: cat.unknownBirthday,
               })

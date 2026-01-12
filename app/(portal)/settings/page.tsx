@@ -114,7 +114,7 @@ export default function SettingsPage() {
       <main className="px-6 pb-6 space-y-8">
         <Card>
           <CardContent className="py-4 space-y-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
                   {user?.profilePhoto ? (
@@ -123,14 +123,16 @@ export default function SettingsPage() {
                     <User className="w-6 h-6 text-primary" />
                   )}
                 </div>
-                <div>
-                  <p className="text-lg font-semibold text-foreground">{user?.name || "집사님"}</p>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-lg font-semibold text-foreground">{user?.name || "집사님"}</p>
+                    <Button asChild variant="outline" size="sm" className="text-xs h-8 px-3">
+                      <Link href="/settings/profile">프로필 편집</Link>
+                    </Button>
+                  </div>
                   <p className="text-base text-muted-foreground">{user?.email || "demo@areyouokat.com"}</p>
                 </div>
               </div>
-              <Button asChild variant="outline" size="default" className="text-base">
-                <Link href="/settings/profile">프로필 편집</Link>
-              </Button>
             </div>
 
             <div className="space-y-2">
