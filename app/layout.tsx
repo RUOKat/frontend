@@ -6,6 +6,7 @@ import { SplashGate } from "@/components/app/splash-gate"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ActiveCatProvider } from "@/contexts/active-cat-context"
 import { OnboardingProvider } from "@/contexts/onboarding-context"
+import { WebViewProvider } from "@/contexts/webview-context"
 import "./globals.css"
 
 const notoSansKR = Noto_Sans_KR({
@@ -36,13 +37,15 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className={`${notoSansKR.className} antialiased`}>
-        <AuthProvider>
-          <ActiveCatProvider>
-            <OnboardingProvider>
-              <SplashGate>{children}</SplashGate>
-            </OnboardingProvider>
-          </ActiveCatProvider>
-        </AuthProvider>
+        <WebViewProvider>
+          <AuthProvider>
+            <ActiveCatProvider>
+              <OnboardingProvider>
+                <SplashGate>{children}</SplashGate>
+              </OnboardingProvider>
+            </ActiveCatProvider>
+          </AuthProvider>
+        </WebViewProvider>
         <Analytics />
       </body>
     </html>

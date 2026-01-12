@@ -29,11 +29,14 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { useAuth } from "@/contexts/auth-context"
 import { useActiveCat } from "@/contexts/active-cat-context"
+import { useWebView } from "@/contexts/webview-context"
 
 export default function UserProfileEditPage() {
   const router = useRouter()
   const { user, updateUser, accessToken, clearLocalAuth } = useAuth()
   const { activeCat } = useActiveCat()
+  const { isWebView, appEnv, tokens } = useWebView()
+  const isDev = process.env.NODE_ENV === "development"
   const [name, setName] = useState("")
   const [address, setAddress] = useState("")
   const [email, setEmail] = useState("")
@@ -485,6 +488,58 @@ export default function UserProfileEditPage() {
             {deleteError && <p className="text-xs text-red-600">{deleteError}</p>}
           </CardContent>
         </Card>
+
+        {/* 개발환경 디버깅 섹션 */}
+        {isDev && (
+          <Card className="border-dashed border-yellow-500 bg-yellow-50/50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold text-yellow-700 flex items-center gap-2">
+                🛠️ 개발 디버깅 (Dev Only)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="text-xs space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-yellow-800">환경:</span>
+                  <span className={`px-2 py-0.5 rounded text-white ${isWebView ? "bg-blue-500" : "bg-gray-500"}`}>
+                    {isWebView ? "📱 WebView" : "🌐 Browser"}
+                  </span>
+                </div>
+
+                {appEnv && (
+                  <div className="bg-white/70 rounded p-2 space-y-1">
+                    <p><span className="font-medium">Platform:</span> {appEnv.platform}</p>
+                    <p><span className="font-medium">App Version:</span> {appEnv.appVersion}</p>
+                    <p><span className="font-medium">Network:</span> {appEnv.networkState}</p>
+                  </div>
+                )}
+
+                <div className="bg-white/70 rounded p-2 space-y-2">
+                  <div>
+                    <p className="font-medium text-yellow-800 mb-1">APP_TOKEN:</p>
+                    <code className="block text-[10px] bg-gray-100 p-1.5 rounded break-all max-h-16 overflow-auto">
+                      {tokens.appToken || "(없음)"}
+                    </code>
+                  </div>
+
+                  <div>
+                    <p className="font-medium text-yellow-800 mb-1">EXPO_PUSH_TOKEN:</p>
+                    <code className="block text-[10px] bg-gray-100 p-1.5 rounded break-all max-h-16 overflow-auto">
+                      {tokens.expoPushToken || "(없음)"}
+                    </code>
+                  </div>
+
+                  <div>
+                    <p className="font-medium text-yellow-800 mb-1">DEVICE_ID:</p>
+                    <code className="block text-[10px] bg-gray-100 p-1.5 rounded break-all max-h-16 overflow-auto">
+                      {tokens.deviceId || "(없음)"}
+                    </code>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   )
