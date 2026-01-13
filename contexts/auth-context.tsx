@@ -137,7 +137,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setBackendSync("ok")
       } catch (error) {
         const status = typeof error === "object" && error ? (error as { status?: number }).status : undefined
-        if (status === 401 || status === 403) {
+        console.error("Backend sync failed", { status, error })
+        
+        // 401/403이어도 로컬 토큰이 있으면 일단 로그인 상태 유지
+        // (백엔드 연결 문제일 수 있으므로 바로 로그아웃하지 않음)
+        const accessToken = tokens?.accessToken ?? (typeof window !== "undefined" ? sessionStorage.getItem("access_token") : null)
+        const idToken = tokens?.idToken ?? (typeof window !== "undefined" ? sessionStorage.getItem("id_token") : null)
+        
+        if (accessToken && idToken) {
+          // 토큰이 있으면 로컬 상태 유지
+          const storedAuth = loadAuth<AuthState>()
+          if (storedAuth?.isAuthenticated && storedAuth?.user) {
+            setAuthState(storedAuth)
+          }
+          setBackendSync("error")
+        } else if (status === 401 || status === 403) {
+          // 토큰도 없고 인증 실패면 로그아웃
           const newState: AuthState = {
             isAuthenticated: false,
             user: null,
@@ -154,13 +169,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           setBackendSync("error")
           return
-        }
-
-        console.error("Backend sync failed", error)
-        setBackendSync("error")
-        if (!syncErrorShownRef.current && typeof window !== "undefined") {
-          syncErrorShownRef.current = true
-          window.alert("백엔드 동기화 실패")
+        } else {
+          setBackendSync("error")
         }
       } finally {
         setIsLoading(false)
