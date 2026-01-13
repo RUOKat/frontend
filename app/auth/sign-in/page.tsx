@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/contexts/auth-context"
 import { getCognitoLoginUrl, isCognitoConfigured } from "@/lib/cognito"
+import { useWebViewAuth } from "@/hooks/useWebViewAuth"
 import { Cat, Chrome, Mail, Shield, Zap } from "lucide-react"
 
 type LoginResponse = {
@@ -43,9 +44,23 @@ export default function SignInPage() {
   const cognitoEnabled = isCognitoConfigured()
   const canSubmit = email.trim().length > 0 && password.length > 0
 
+  // WebView 인증 훅
+  const { isWebView, requestGoogleLogin, isLoading: webViewAuthLoading, error: webViewAuthError } = useWebViewAuth()
+
   const handleGoogleLogin = async () => {
     setIsLoading(true)
     setError(null)
+    
+    // WebView 환경에서는 앱으로 로그인 요청 전달
+    if (isWebView) {
+      const sent = requestGoogleLogin()
+      if (sent) {
+        console.log('📱 WebView: 앱으로 Google 로그인 요청 전달됨')
+        return // 앱에서 처리 후 AUTH_LOGIN_SUCCESS 메시지로 응답
+      }
+    }
+    
+    // 웹 브라우저 환경에서는 기존 Cognito 로그인 플로우
     try {
       const loginUrl = await getCognitoLoginUrl({ provider: "Google" })
       window.location.href = loginUrl
@@ -171,10 +186,11 @@ export default function SignInPage() {
                       required
                     />
                   </div>
-                  {error && <p className="text-xs text-red-600">{error}</p>}
-                  <Button type="submit" disabled={!canSubmit || isLoading} className="w-full h-12" size="lg">
+                {error && <p className="text-xs text-red-600">{error}</p>}
+                  {webViewAuthError && <p className="text-xs text-red-600">{webViewAuthError}</p>}
+                  <Button type="submit" disabled={!canSubmit || isLoading || webViewAuthLoading} className="w-full h-12" size="lg">
                     <Mail className="w-5 h-5 mr-2" />
-                    {isLoading ? "로그인 중..." : "이메일로 로그인"}
+                    {isLoading || webViewAuthLoading ? "로그인 중..." : "이메일로 로그인"}
                   </Button>
                 </form>
 
@@ -187,12 +203,12 @@ export default function SignInPage() {
                 <Button
                   type="button"
                   onClick={handleGoogleLogin}
-                  disabled={isLoading}
+                  disabled={isLoading || webViewAuthLoading}
                   className="w-full h-12"
                   size="lg"
                 >
                   <Chrome className="w-5 h-5 mr-2" />
-                  {isLoading ? "로그인 중..." : "Google로 계속하기"}
+                  {isLoading || webViewAuthLoading ? "로그인 중..." : "Google로 계속하기"}
                 </Button>
 
                 <div className="text-center text-xs text-muted-foreground">
