@@ -354,9 +354,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // 웹 브라우저 환경에서는 Cognito 로그아웃
-    const logoutUrl = isCognitoConfigured() ? getCognitoLogoutUrl() : "/auth/sign-in"
-    window.location.href = logoutUrl
+    // // 웹 브라우저 환경에서는 Cognito 로그아웃
+    // const logoutUrl = isCognitoConfigured() ? getCognitoLogoutUrl() : "/auth/sign-in"
+    window.location.href = "/auth/sign-in"
   }, [])
 
   const mockLogin = useCallback(() => {
