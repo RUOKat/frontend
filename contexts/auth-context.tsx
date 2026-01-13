@@ -339,6 +339,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch {}
 
+    // WebView 환경에서는 앱으로 로그아웃 요청
+    const isWebView = !!(window as any).ReactNativeWebView
+    if (isWebView) {
+      try {
+        (window as any).ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'LOGOUT_REQUEST',
+        }))
+        // 로그인 페이지로 이동
+        window.location.href = "/auth/sign-in"
+        return
+      } catch (e) {
+        console.error('WebView 로그아웃 요청 실패:', e)
+      }
+    }
+
+    // 웹 브라우저 환경에서는 Cognito 로그아웃
     const logoutUrl = isCognitoConfigured() ? getCognitoLogoutUrl() : "/auth/sign-in"
     window.location.href = logoutUrl
   }, [])
