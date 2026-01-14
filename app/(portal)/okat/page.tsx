@@ -11,7 +11,7 @@ import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
 import { getMockOkatSummary, getMockWeeklyReports, type OkatMetric, type OkatSummary, type WeeklyReport } from "@/lib/okat-data"
 import { Camera, ChevronRight, ClipboardList } from "lucide-react"
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
+import { CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from "recharts"
 
 function formatDateTime(value?: string | null) {
   if (!value) return "업데이트 없음"
@@ -156,12 +156,25 @@ export default function OkatDashboardPage() {
                           hide
                           domain={["dataMin - 4", "dataMax + 4"]}
                         />
+                        <Tooltip
+                          content={({ active, payload }) => {
+                            if (!active || !payload?.length) return null
+                            const data = payload[0].payload as MetricPoint
+                            return (
+                              <div className="rounded-md border bg-background px-2 py-1 shadow-sm">
+                                <p className="text-xs font-medium">{metric.label}: {data.value}</p>
+                                <p className="text-xs text-muted-foreground">Day {data.day}</p>
+                              </div>
+                            )
+                          }}
+                        />
                         <Line
                           dataKey="value"
                           type="monotone"
                           stroke="var(--color-value)"
                           strokeWidth={2}
                           dot={false}
+                          activeDot={{ r: 4, strokeWidth: 0 }}
                         />
                       </LineChart>
                     </ChartContainer>

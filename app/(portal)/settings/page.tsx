@@ -1,11 +1,9 @@
 "use client"
 
-import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { useAuth } from "@/contexts/auth-context"
 import { useActiveCat } from "@/contexts/active-cat-context"
@@ -26,7 +24,6 @@ export default function SettingsPage() {
   const { shelterShareOptIn } = useOnboarding()
   const { isWebView, appEnv, tokens } = useWebView()
   const isDev = process.env.NODE_ENV === "development"
-  const [alertPriority, setAlertPriority] = useState("important")
 
   const catCount = cats.length
   const loginMethodLabel = user?.email ? "이메일" : "데모"
@@ -88,23 +85,6 @@ export default function SettingsPage() {
                         checked={notificationsEnabled}
                         onCheckedChange={(enabled) => updateUser({ notificationsEnabled: enabled })}
                       />
-                    </div>
-
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-foreground">이상 신호 알림 우선순위(선택)</p>
-                        <p className="text-xs text-muted-foreground">중요한 변화부터 알려드릴 수 있어요.</p>
-                      </div>
-                      <Select value={alertPriority} onValueChange={setAlertPriority} disabled={!notificationsEnabled}>
-                        <SelectTrigger className="w-[150px]">
-                          <SelectValue placeholder="선택" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="important">중요 알림 우선</SelectItem>
-                          <SelectItem value="standard">표준</SelectItem>
-                          <SelectItem value="all">전체 알림</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
                   </CardContent>
                 </Card>
