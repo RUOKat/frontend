@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Cat, Home, User, type LucideIcon } from "lucide-react"
 import { useOnboarding } from "@/contexts/onboarding-context"
+import { useHaptic } from "@/hooks/useHaptic"
 
 interface AppShellProps {
   children: ReactNode
@@ -27,6 +28,7 @@ const navItems: NavItem[] = [
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname()
   const { onboardingCompleted, isLoading } = useOnboarding()
+  const { light } = useHaptic()
 
   // Hide shell on auth/onboarding pages
   const isAuthOrOnboarding = pathname.startsWith("/auth") || pathname.startsWith("/onboarding")
@@ -54,6 +56,7 @@ export function AppShell({ children }: AppShellProps) {
                 href={item.href}
                 aria-label={item.label}
                 title={item.label}
+                onClick={light}
                 className={cn(
                   "flex flex-1 flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-lg transition-colors",
                   isOkat && "flex-[1.2] gap-1",

@@ -31,7 +31,7 @@ function getSignUpErrorMessage(error: unknown): string {
     case "UsernameExistsException":
       return "이미 가입된 이메일이에요. 로그인해 주세요."
     case "InvalidPasswordException":
-      return "비밀번호가 규칙에 맞지 않아요. 다시 확인해주세요."
+      return "비밀번호는 8자 이상이며 알파벳 소문자와 숫자를 포함해야 해요."
     case "InvalidParameterException":
       return "입력한 정보를 다시 확인해주세요."
     case "CodeDeliveryFailureException":
