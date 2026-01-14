@@ -75,10 +75,11 @@ export default function ConsentNoticePage() {
       ...activeCat.dataSharing,
       enabled: false,
     }
+    // 만료 처리는 로컬에서만 (백엔드 동기화 스킵)
     updateCat({
       ...activeCat,
       dataSharing: nextDataSharing,
-    })
+    }, true)
     setShelterShareOptIn(false)
   }, [activeCat, setShelterShareOptIn, updateCat])
 

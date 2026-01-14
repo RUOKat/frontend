@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { exchangeCodeForTokens } from "@/lib/cognito"
 import { useAuth } from "@/contexts/auth-context"
+import { fetchMyPets } from "@/lib/backend-pets"
+import { saveCats, saveActiveCatId } from "@/lib/storage"
 
 function parseJwtPayload(idToken: string): { sub?: string; email?: string; name?: string } | null {
   try {
@@ -98,7 +100,22 @@ export default function CallbackPage() {
       setStatus("success")
       setMessage("로그인 완료! 이동 중입니다...")
 
-      router.replace("/onboarding/cat")
+      // 백엔드에서 펫 목록 확인 후 분기
+      try {
+        const pets = await fetchMyPets()
+        console.log("펫 목록 조회 결과:", pets.length)
+        if (pets.length > 0) {
+          // 로컬 스토리지에 저장하여 auth-guard가 인식하도록
+          saveCats(pets)
+          saveActiveCatId(pets[0].id!)
+          router.replace("/")
+        } else {
+          router.replace("/onboarding/cat")
+        }
+      } catch (e) {
+        console.error("펫 목록 조회 실패:", e)
+        router.replace("/onboarding/cat")
+      }
     })()
   }, [code, error, errorDescription, login, router])
 

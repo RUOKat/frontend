@@ -136,6 +136,7 @@ export default function CatProfilePage() {
   const [showOptional, setShowOptional] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null)
+  const [showValidation, setShowValidation] = useState(false)
   const searchParams = useSearchParams()
   const isNewCatMode = searchParams.get("mode") === "new"
 
@@ -382,7 +383,10 @@ export default function CatProfilePage() {
   }
 
   const handleSubmit = () => {
-    if (!isValid) return
+    if (!isValid) {
+      setShowValidation(true)
+      return
+    }
 
     setIsSubmitting(true)
     const isCreating = isNewCatMode || cats.length === 0 || !activeCat
@@ -490,21 +494,25 @@ export default function CatProfilePage() {
 
               {/* 이름 */}
               <div className="space-y-2">
-                <Label htmlFor="name">이름</Label>
+                <Label htmlFor="name">이름 <span className="text-destructive">*</span></Label>
                 <Input
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="고양이 이름"
                   maxLength={20}
+                  className={showValidation && !name.trim() ? "border-destructive ring-destructive" : ""}
                 />
+                {showValidation && !name.trim() && (
+                  <p className="text-xs text-destructive">이름을 입력해 주세요.</p>
+                )}
               </div>
 
               {/* 입양 경로 */}
               <div className="space-y-2">
-                <Label>입양 경로</Label>
+                <Label>입양 경로 <span className="text-destructive">*</span></Label>
                 <Select value={adoptionPath} onValueChange={setAdoptionPath}>
-                  <SelectTrigger>
+                  <SelectTrigger className={showValidation && !hasAdoptionPath ? "border-destructive ring-destructive" : ""}>
                     <SelectValue placeholder="입양 경로 선택" />
                   </SelectTrigger>
                   <SelectContent>
@@ -515,12 +523,15 @@ export default function CatProfilePage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {showValidation && !hasAdoptionPath && (
+                  <p className="text-xs text-destructive">입양 경로를 선택해 주세요.</p>
+                )}
                 {adoptionPath === "기타" && (
                   <Input
                     value={customAdoptionPath}
                     onChange={(e) => setCustomAdoptionPath(e.target.value)}
                     placeholder="입양 경로 입력"
-                    className="mt-2"
+                    className={`mt-2 ${showValidation && adoptionPath === "기타" && !customAdoptionPath.trim() ? "border-destructive ring-destructive" : ""}`}
                   />
                 )}
                 {isAgencyAdoption && (
@@ -545,7 +556,7 @@ export default function CatProfilePage() {
               {/* 생년월일 */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="birthDate">생년월일</Label>
+                  <Label htmlFor="birthDate">생년월일 <span className="text-destructive">*</span></Label>
                   <div className="flex items-center gap-2">
                     <Switch id="unknownBirthday" checked={unknownBirthday} onCheckedChange={setUnknownBirthday} />
                     <Label htmlFor="unknownBirthday" className="text-xs text-muted-foreground cursor-pointer">
@@ -554,19 +565,36 @@ export default function CatProfilePage() {
                   </div>
                 </div>
                 {unknownBirthday ? (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      value={estimatedAge}
-                      onChange={(e) => setEstimatedAge(e.target.value)}
-                      placeholder="추정 나이"
-                      min={1}
-                      max={300}
-                    />
-                    <span className="text-sm text-muted-foreground whitespace-nowrap">개월</span>
-                  </div>
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={estimatedAge}
+                        onChange={(e) => setEstimatedAge(e.target.value)}
+                        placeholder="추정 나이"
+                        min={1}
+                        max={300}
+                        className={showValidation && !estimatedAge ? "border-destructive ring-destructive" : ""}
+                      />
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">개월</span>
+                    </div>
+                    {showValidation && !estimatedAge && (
+                      <p className="text-xs text-destructive">추정 나이를 입력해 주세요.</p>
+                    )}
+                  </>
                 ) : (
-                  <Input type="date" id="birthDate" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
+                  <>
+                    <Input
+                      type="date"
+                      id="birthDate"
+                      value={birthDate}
+                      onChange={(e) => setBirthDate(e.target.value)}
+                      className={showValidation && !birthDate ? "border-destructive ring-destructive" : ""}
+                    />
+                    {showValidation && !birthDate && (
+                      <p className="text-xs text-destructive">생년월일을 입력해 주세요.</p>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -583,8 +611,8 @@ export default function CatProfilePage() {
 
               {/* 성별 */}
               <div className="space-y-2">
-                <Label>성별</Label>
-                <div className="flex gap-2">
+                <Label>성별 <span className="text-destructive">*</span></Label>
+                <div className={`flex gap-2 ${showValidation && !gender ? "rounded-md ring-2 ring-destructive p-1 -m-1" : ""}`}>
                   <Button
                     type="button"
                     variant={gender === "male" ? "default" : "outline"}
@@ -604,6 +632,9 @@ export default function CatProfilePage() {
                     암컷
                   </Button>
                 </div>
+                {showValidation && !gender && (
+                  <p className="text-xs text-destructive">성별을 선택해 주세요.</p>
+                )}
               </div>
 
               {/* 중성화 */}
@@ -614,9 +645,9 @@ export default function CatProfilePage() {
 
               {/* 품종 */}
               <div className="space-y-2">
-                <Label>품종</Label>
+                <Label>품종 <span className="text-destructive">*</span></Label>
                 <Select value={breed} onValueChange={setBreed}>
-                  <SelectTrigger>
+                  <SelectTrigger className={showValidation && !breed ? "border-destructive ring-destructive" : ""}>
                     <SelectValue placeholder="품종 선택" />
                   </SelectTrigger>
                   <SelectContent>
@@ -627,6 +658,9 @@ export default function CatProfilePage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {showValidation && !breed && (
+                  <p className="text-xs text-destructive">품종을 선택해 주세요.</p>
+                )}
                 {breed === "기타" && (
                   <Input
                     value={customBreed}
@@ -639,7 +673,7 @@ export default function CatProfilePage() {
 
               {/* 체중 */}
               <div className="space-y-2">
-                <Label htmlFor="weight">체중</Label>
+                <Label htmlFor="weight">체중 <span className="text-destructive">*</span></Label>
                 <div className="flex items-center gap-2">
                   <Input
                     id="weight"
@@ -650,15 +684,19 @@ export default function CatProfilePage() {
                     step="0.1"
                     min="0.1"
                     max="30"
+                    className={showValidation && !weight ? "border-destructive ring-destructive" : ""}
                   />
                   <span className="text-sm text-muted-foreground whitespace-nowrap">kg</span>
                 </div>
+                {showValidation && !weight && (
+                  <p className="text-xs text-destructive">체중을 입력해 주세요.</p>
+                )}
               </div>
 
               {/* 사료 타입 */}
               <div className="space-y-2">
-                <Label>사료 타입</Label>
-                <div className="grid grid-cols-2 gap-2">
+                <Label>사료 타입 <span className="text-destructive">*</span></Label>
+                <div className={`grid grid-cols-2 gap-2 ${showValidation && !foodType ? "rounded-md ring-2 ring-destructive p-1 -m-1" : ""}`}>
                   {[
                     { value: "dry", label: "건식" },
                     { value: "wet", label: "습식" },
@@ -677,12 +715,15 @@ export default function CatProfilePage() {
                     </Button>
                   ))}
                 </div>
+                {showValidation && !foodType && (
+                  <p className="text-xs text-destructive">사료 타입을 선택해 주세요.</p>
+                )}
               </div>
 
               {/* 급수 방식 */}
               <div className="space-y-2">
-                <Label>급수 방식</Label>
-                <div className="grid grid-cols-3 gap-2">
+                <Label>급수 방식 <span className="text-destructive">*</span></Label>
+                <div className={`grid grid-cols-3 gap-2 ${showValidation && !waterSource ? "rounded-md ring-2 ring-destructive p-1 -m-1" : ""}`}>
                   {[
                     { value: "fountain", label: "정수기" },
                     { value: "bowl", label: "그릇" },
@@ -700,13 +741,16 @@ export default function CatProfilePage() {
                     </Button>
                   ))}
                 </div>
+                {showValidation && !waterSource && (
+                  <p className="text-xs text-destructive">급수 방식을 선택해 주세요.</p>
+                )}
               </div>
 
               {/* 진단 설문 일정 */}
               <div className="space-y-2">
-                <Label>진단 설문 주간 횟수</Label>
+                <Label>진단 설문 주간 횟수 <span className="text-destructive">*</span></Label>
                 <Select value={surveyFrequency} onValueChange={setSurveyFrequency}>
-                  <SelectTrigger>
+                  <SelectTrigger className={showValidation && !surveyFrequencyValue ? "border-destructive ring-destructive" : ""}>
                     <SelectValue placeholder="--선택--" />
                   </SelectTrigger>
                   <SelectContent>
@@ -717,12 +761,15 @@ export default function CatProfilePage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {showValidation && !surveyFrequencyValue && (
+                  <p className="text-xs text-destructive">주간 횟수를 선택해 주세요.</p>
+                )}
                 <p className="text-xs text-muted-foreground">주간 횟수에 맞춰 원하는 요일을 선택해 주세요.</p>
               </div>
 
               <div className="space-y-2">
-                <Label>요일 선택</Label>
-                <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+                <Label>요일 선택 <span className="text-destructive">*</span></Label>
+                <div className={`grid grid-cols-4 gap-2 sm:grid-cols-7 ${showValidation && surveyFrequencyValue && !isSurveyScheduleValid ? "rounded-md ring-2 ring-destructive p-1 -m-1" : ""}`}>
                   {weekDays.map((day) => {
                     const isSelected = surveyDays.includes(day.value)
                     const isAtLimit = surveyDays.length >= surveyFrequencyValue

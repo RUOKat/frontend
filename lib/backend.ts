@@ -59,6 +59,7 @@ export async function backendFetch<T = unknown>(path: string, options: BackendFe
   const { accessToken, idToken } = getTokens()
   const { allowNotModified, ...fetchOptions } = options
   const headers = new Headers(options.headers ?? {})
+  const url = buildUrl(path)
 
   if (!headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json")
@@ -70,10 +71,17 @@ export async function backendFetch<T = unknown>(path: string, options: BackendFe
     headers.set("x-id-token", idToken)
   }
 
-  const response = await fetch(buildUrl(path), {
-    ...fetchOptions,
-    headers,
-  })
+  let response: Response
+  try {
+    response = await fetch(url, {
+      ...fetchOptions,
+      headers,
+    })
+  } catch (networkError) {
+    const message = networkError instanceof Error ? networkError.message : String(networkError)
+    console.error(`[API] Network error: ${url} - ${message}`)
+    throw networkError
+  }
 
   if (response.status === 304 && allowNotModified) {
     return null
@@ -81,13 +89,11 @@ export async function backendFetch<T = unknown>(path: string, options: BackendFe
 
   const { data, text } = await parseResponse<T>(response)
   if (!response.ok) {
-    const body = text ?? (data ? JSON.stringify(data) : null)
-    if (body) {
-      console.error("Backend request failed", { url: response.url, status: response.status, body })
-    } else {
-      console.error("Backend request failed", { url: response.url, status: response.status })
-    }
-    const error: BackendError = new Error(response.statusText || "Backend request failed")
+    const bodyStr = text ?? (data ? JSON.stringify(data) : "(empty)")
+    console.error(`[API] ${response.status} ${response.statusText} - ${url}`)
+    console.error(`[API] Response body: ${bodyStr}`)
+
+    const error: BackendError = new Error(`${response.status} ${response.statusText || "Backend request failed"}: ${url}`)
     error.status = response.status
     error.body = data ?? text
     throw error
