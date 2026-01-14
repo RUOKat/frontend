@@ -3,13 +3,14 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { useAuth } from "@/contexts/auth-context"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
+import { useWebView } from "@/contexts/webview-context"
 import {
   Bell,
   Cat,
@@ -20,9 +21,11 @@ import {
 } from "lucide-react"
 
 export default function SettingsPage() {
-  const { user, updateUser } = useAuth()
+  const { user, updateUser, accessToken, idToken } = useAuth()
   const { activeCat, cats } = useActiveCat()
   const { shelterShareOptIn } = useOnboarding()
+  const { isWebView, appEnv, tokens } = useWebView()
+  const isDev = process.env.NODE_ENV === "development"
   const [alertPriority, setAlertPriority] = useState("important")
 
   const catCount = cats.length
@@ -208,6 +211,72 @@ export default function SettingsPage() {
         <div className="text-center pt-2">
           <p className="text-xs text-muted-foreground">Are You Okat? v1.0.0</p>
         </div>
+
+        {/* 개발환경 디버깅 섹션 */}
+        {isDev && (
+          <Card className="border-dashed border-yellow-500 bg-yellow-50/50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold text-yellow-700 flex items-center gap-2">
+                🛠️ 개발 디버깅 (Dev Only)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="text-xs space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-yellow-800">환경:</span>
+                  <span className={`px-2 py-0.5 rounded text-white ${isWebView ? "bg-blue-500" : "bg-gray-500"}`}>
+                    {isWebView ? "📱 WebView" : "🌐 Browser"}
+                  </span>
+                </div>
+
+                {appEnv && (
+                  <div className="bg-white/70 rounded p-2 space-y-1">
+                    <p><span className="font-medium">Platform:</span> {appEnv.platform}</p>
+                    <p><span className="font-medium">App Version:</span> {appEnv.appVersion}</p>
+                    <p><span className="font-medium">Network:</span> {appEnv.networkState}</p>
+                  </div>
+                )}
+
+                <div className="bg-white/70 rounded p-2 space-y-2">
+                  <div>
+                    <p className="font-medium text-yellow-800 mb-1">ACCESS_TOKEN:</p>
+                    <code className="block text-[10px] bg-gray-100 p-1.5 rounded break-all max-h-16 overflow-auto">
+                      {accessToken || "(없음)"}
+                    </code>
+                  </div>
+
+                  <div>
+                    <p className="font-medium text-yellow-800 mb-1">ID_TOKEN:</p>
+                    <code className="block text-[10px] bg-gray-100 p-1.5 rounded break-all max-h-16 overflow-auto">
+                      {idToken || "(없음)"}
+                    </code>
+                  </div>
+
+                  <div>
+                    <p className="font-medium text-yellow-800 mb-1">APP_TOKEN:</p>
+                    <code className="block text-[10px] bg-gray-100 p-1.5 rounded break-all max-h-16 overflow-auto">
+                      {tokens.appToken || "(없음)"}
+                    </code>
+                  </div>
+
+                  <div>
+                    <p className="font-medium text-yellow-800 mb-1">EXPO_PUSH_TOKEN:</p>
+                    <code className="block text-[10px] bg-gray-100 p-1.5 rounded break-all max-h-16 overflow-auto">
+                      {tokens.expoPushToken || "(없음)"}
+                    </code>
+                  </div>
+
+                  <div>
+                    <p className="font-medium text-yellow-800 mb-1">DEVICE_ID:</p>
+                    <code className="block text-[10px] bg-gray-100 p-1.5 rounded break-all max-h-16 overflow-auto">
+                      {tokens.deviceId || "(없음)"}
+                    </code>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   )
