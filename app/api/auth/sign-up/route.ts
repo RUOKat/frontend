@@ -31,11 +31,17 @@ export async function POST(request: Request) {
   const client = new CognitoIdentityProviderClient({ region })
 
   try {
+    // 이메일에서 이름 추출 (@ 앞부분)
+    const name = email.split("@")[0] || "User"
+
     const command = new SignUpCommand({
       ClientId: clientId,
       Username: email,
       Password: password,
-      UserAttributes: [{ Name: "email", Value: email }],
+      UserAttributes: [
+        { Name: "email", Value: email },
+        { Name: "name", Value: name },
+      ],
     })
 
     const response = await client.send(command)
@@ -46,10 +52,10 @@ export async function POST(request: Request) {
       userConfirmed: response.UserConfirmed ?? false,
       codeDeliveryDetails: details
         ? {
-            destination: details.Destination,
-            deliveryMedium: details.DeliveryMedium,
-            attributeName: details.AttributeName,
-          }
+          destination: details.Destination,
+          deliveryMedium: details.DeliveryMedium,
+          attributeName: details.AttributeName,
+        }
         : null,
     })
   } catch (error) {
