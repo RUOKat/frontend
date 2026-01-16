@@ -106,8 +106,8 @@ export default function ConsentNoticePage() {
     updateCat({
       ...activeCat,
       dataSharing: nextDataSharing,
-      careShareStartAt: enabled ? now.getTime() : undefined,
-      careShareEndAt: enabled && isAgencyAdoption ? new Date(expiresAt || now.toISOString()).getTime() : undefined,
+      careShareStartAt: enabled ? now.toISOString() : undefined,
+      careShareEndAt: enabled && isAgencyAdoption ? (expiresAt || undefined) : undefined,
       agencyCode: activeCat.agencyCode ?? activeCat.adoptionAgencyCode,
     })
 

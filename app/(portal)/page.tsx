@@ -369,7 +369,7 @@ export default function HomePage() {
                   <div className="w-full rounded-xl border border-primary/20 bg-background/70 p-4">
                     <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
                       <span className="rounded-full border border-border bg-background/80 px-3 py-1">
-                        12월 혜택
+                        1월 혜택
                       </span>
                       <span className="rounded-full border border-border bg-secondary px-3 py-1">택 1</span>
                       <span className="text-sm font-medium text-foreground/70">월간 케어 참여 80% 이상 하시면!</span>

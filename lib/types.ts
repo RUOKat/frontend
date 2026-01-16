@@ -28,8 +28,8 @@ export interface CatProfile {
   adoptionAgencyCode?: string
   agencyCode?: string
   dataSharing?: DataSharing
-  careShareStartAt?: number
-  careShareEndAt?: number
+  careShareStartAt?: string // ISO timestamp
+  careShareEndAt?: string // ISO timestamp
   birthDate?: string // ISO string
   familyDate?: string // ISO string
   adoptionDate?: string // ISO string

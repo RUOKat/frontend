@@ -8,7 +8,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { Skeleton } from "@/components/ui/skeleton"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import type { CatProfile } from "@/lib/types"
-import { Cat, Check, ChevronDown, PlusCircle } from "lucide-react"
+import { Cat, Check, ChevronDown, PlusCircle, Pencil } from "lucide-react"
 
 type DateParts = {
   year: number
@@ -255,6 +255,11 @@ export function CatSelector({ embedded = false, primaryAction = "select" }: CatS
               {familyLine ? <p className="text-xs text-muted-foreground">{familyLine}</p> : null}
               {careShareLine ? <p className="text-xs text-muted-foreground">{careShareLine}</p> : null}
             </div>
+            {primaryAction === "edit" && (
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted/50 hover:bg-muted transition">
+                <Pencil className="w-4 h-4 text-muted-foreground" />
+              </div>
+            )}
           </button>
           <button
             type="button"

@@ -17,6 +17,25 @@ export function getTokens(): BackendTokens {
   }
 }
 
+function clearTokensAndRedirect(): void {
+  if (typeof window === "undefined") return
+
+  try {
+    // 세션 스토리지 토큰 삭제
+    sessionStorage.removeItem("access_token")
+    sessionStorage.removeItem("id_token")
+    sessionStorage.removeItem("refresh_token")
+
+    // 로컬 스토리지 인증 정보 삭제
+    localStorage.removeItem("areyouokat_auth")
+
+    // 로그인 페이지로 리다이렉트
+    window.location.href = "/auth/sign-in"
+  } catch (e) {
+    console.error("로그아웃 처리 실패:", e)
+  }
+}
+
 type BackendError = Error & { status?: number; body?: unknown }
 type BackendFetchOptions = RequestInit & { allowNotModified?: boolean }
 type ParsedResponse<T> = { data: T | null; text: string | null }
@@ -92,6 +111,13 @@ export async function backendFetch<T = unknown>(path: string, options: BackendFe
     const bodyStr = text ?? (data ? JSON.stringify(data) : "(empty)")
     console.error(`[API] ${response.status} ${response.statusText} - ${url}`)
     console.error(`[API] Response body: ${bodyStr}`)
+
+    // 401 Unauthorized → 로그아웃 처리
+    if (response.status === 401) {
+      console.warn("[API] 401 Unauthorized - 로그아웃 처리")
+      clearTokensAndRedirect()
+      return null
+    }
 
     const error: BackendError = new Error(`${response.status} ${response.statusText || "Backend request failed"}: ${url}`)
     error.status = response.status

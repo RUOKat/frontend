@@ -27,7 +27,16 @@ import {
   type MedicalHistoryV2,
 } from "@/lib/medical-history"
 import type { AdoptionSource, CatProfile, MedicationSelection, Weekday } from "@/lib/types"
-import { Cat, ChevronDown, ChevronUp, ArrowRight, X } from "lucide-react"
+import { Cat, ChevronDown, ChevronUp, ArrowRight, X, Trash2 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 const medicalHistoryGroupMap = getMedicalHistoryGroupMap()
 const medicalHistoryItemMap = getMedicalHistoryItemMap()
@@ -132,11 +141,13 @@ function createCatId(): string {
 
 export default function CatProfilePage() {
   const router = useRouter()
-  const { activeCat, activeCatId, addCat, updateCat, cats } = useActiveCat()
+  const { activeCat, activeCatId, addCat, updateCat, deleteCat, cats } = useActiveCat()
   const [showOptional, setShowOptional] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null)
   const [showValidation, setShowValidation] = useState(false)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const searchParams = useSearchParams()
   const isNewCatMode = searchParams.get("mode") === "new"
 
@@ -380,6 +391,26 @@ export default function CatProfilePage() {
 
   const clearMedicalHistory = () => {
     setMedicalHistory(createEmptyMedicalHistory())
+  }
+
+  const handleDelete = async () => {
+    if (!activeCat?.id) return
+    
+    setIsDeleting(true)
+    try {
+      const success = await deleteCat(activeCat.id)
+      if (success) {
+        setIsDeleteOpen(false)
+        // 남은 고양이가 있으면 홈으로, 없으면 새 고양이 등록
+        if (cats.length > 1) {
+          router.push("/")
+        } else {
+          router.push("/onboarding/cat?mode=new")
+        }
+      }
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   const handleSubmit = () => {
@@ -1125,6 +1156,24 @@ export default function CatProfilePage() {
               </CardContent>
             </Card>
           )}
+
+          {/* 고양이 삭제 - 별도 섹션 */}
+          {!isNewCatMode && activeCat && (
+            <Card className="border-destructive/20">
+              <CardContent className="py-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => setIsDeleteOpen(true)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  이 고양이 프로필 삭제
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </main>
 
@@ -1135,6 +1184,28 @@ export default function CatProfilePage() {
           <ArrowRight className="w-5 h-5 ml-2" />
         </Button>
       </div>
+
+      {/* 삭제 확인 다이얼로그 */}
+      <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{activeCat?.name}의 프로필을 삭제할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              삭제하면 이 고양이의 모든 기록이 사라지며 복구할 수 없어요.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>취소</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "삭제 중..." : "삭제"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

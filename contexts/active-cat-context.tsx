@@ -12,7 +12,7 @@ import {
 } from "@/lib/storage"
 import { migrateCareMonthlyToCat } from "@/lib/care-monthly"
 import { normalizeMedicalHistory } from "@/lib/medical-history"
-import { fetchMyPets, createPet, updatePet } from "@/lib/backend-pets"
+import { fetchMyPets, createPet, updatePet, deletePet } from "@/lib/backend-pets"
 import { getTokens } from "@/lib/backend"
 
 interface ActiveCatContextType {
@@ -22,6 +22,7 @@ interface ActiveCatContextType {
   setActiveCatId: (id: string) => void
   addCat: (profile: CatProfile) => void
   updateCat: (profile: CatProfile, skipBackendSync?: boolean) => void
+  deleteCat: (catId: string) => Promise<boolean>
   syncWithBackend: () => Promise<void>
   isLoading: boolean
   isSyncing: boolean
@@ -242,6 +243,42 @@ export function ActiveCatProvider({ children }: { children: ReactNode }) {
     }
   }, [activeCatId])
 
+  const deleteCat = useCallback(async (catId: string): Promise<boolean> => {
+    // 로컬에서 삭제
+    setCatsState((prev) => {
+      const next = prev.filter((cat) => cat.id !== catId)
+      saveCats(next)
+      return next
+    })
+
+    // 삭제된 고양이가 활성 고양이였으면 다른 고양이로 변경
+    if (activeCatId === catId) {
+      const remainingCats = cats.filter((cat) => cat.id !== catId)
+      if (remainingCats.length > 0 && remainingCats[0].id) {
+        setActiveCatId(remainingCats[0].id)
+      } else {
+        setActiveCatIdState(null)
+      }
+    }
+
+    // 백엔드에서 삭제
+    const { accessToken } = getTokens()
+    if (accessToken) {
+      try {
+        const success = await deletePet(catId)
+        if (success) {
+          console.log("✅ 백엔드에서 펫 삭제 완료:", catId)
+        }
+        return success
+      } catch (error) {
+        console.error("백엔드 펫 삭제 실패:", error)
+        return false
+      }
+    }
+
+    return true
+  }, [activeCatId, cats])
+
   const activeCat = useMemo(() => {
     if (!activeCatId) return cats[0] ?? null
     return cats.find((cat) => cat.id === activeCatId) ?? cats[0] ?? null
@@ -256,6 +293,7 @@ export function ActiveCatProvider({ children }: { children: ReactNode }) {
         setActiveCatId,
         addCat,
         updateCat,
+        deleteCat,
         syncWithBackend,
         isLoading,
         isSyncing,

@@ -40,10 +40,10 @@ export default function SettingsPage() {
         adoptionPathLabel.includes("agency") ||
         adoptionPathLabel.includes("shelter")))
 
-  const careShareEndAt =
-    activeCat?.dataSharing?.expiresAt ? new Date(activeCat.dataSharing.expiresAt).getTime() : activeCat?.careShareEndAt
+  const careShareEndAt = activeCat?.dataSharing?.expiresAt || activeCat?.careShareEndAt
+  const careShareEndAtTime = careShareEndAt ? new Date(careShareEndAt).getTime() : null
   const now = Date.now()
-  const isSharePeriodExpired = typeof careShareEndAt === "number" && careShareEndAt < now
+  const isSharePeriodExpired = careShareEndAtTime !== null && careShareEndAtTime < now
   const shareActive =
     activeCat?.dataSharing?.enabled != null
       ? activeCat.dataSharing.enabled && !isSharePeriodExpired
