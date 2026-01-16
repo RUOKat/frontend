@@ -9,8 +9,10 @@ import { CheckinPopup } from "@/components/app/checkin-popup"
 import { CatSelector } from "@/components/app/cat-selector"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { getMonthlyCareForDate, type MonthlyCareRecord } from "@/lib/care-monthly"
-import { Calendar, Gift, MessageCircle, ExternalLink, Bell } from "lucide-react"
-import { useEffect, useState } from "react"
+import { Calendar, Gift, MessageCircle, ExternalLink, Bell, Trash2 } from "lucide-react"
+import { useEffect, useState, useCallback } from "react"
+import { fetchNotifications, markNotificationAsRead, deleteNotification, type Notification } from "@/lib/backend-notifications"
+import { getTokens } from "@/lib/backend"
 
 const stampImages = [
   "/stamps/cat-stamp-1.png",
@@ -40,22 +42,34 @@ export default function HomePage() {
   const [processedStamps, setProcessedStamps] = useState<Record<string, string>>({})
   const [tipOpen, setTipOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const [notifications, setNotifications] = useState([
-    {
-      id: "notif-1",
-      title: "체크인 기록이 쌓였어요",
-      body: "이번 달 케어 참여 기록이 3일째 이어지고 있어요.",
-      createdAt: "방금 전",
-      read: false,
-    },
-    {
-      id: "notif-2",
-      title: "새로운 케어 팁이 도착했어요",
-      body: "수분 섭취를 늘리는 간단한 팁을 확인해 보세요.",
-      createdAt: "어제",
-      read: true,
-    },
-  ])
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false)
+
+  // 알림 목록 로드
+  const loadNotifications = useCallback(async () => {
+    const { accessToken } = getTokens()
+    if (!accessToken) return
+
+    setIsLoadingNotifications(true)
+    try {
+      const data = await fetchNotifications()
+      setNotifications(data)
+    } finally {
+      setIsLoadingNotifications(false)
+    }
+  }, [])
+
+  // 알림 다이얼로그 열릴 때 로드
+  useEffect(() => {
+    if (notificationsOpen) {
+      loadNotifications()
+    }
+  }, [notificationsOpen, loadNotifications])
+
+  // 초기 로드 (뱃지 카운트용)
+  useEffect(() => {
+    loadNotifications()
+  }, [loadNotifications])
 
   useEffect(() => {
     setMonthlyCare(getMonthlyCareForDate(new Date(), activeCatId ?? undefined))
@@ -179,13 +193,42 @@ export default function HomePage() {
     window.open(url, "_blank", "noopener,noreferrer")
   }
 
-  const unreadCount = notifications.filter((notification) => !notification.read).length
+  const unreadCount = notifications.filter((notification) => !notification.isRead).length
   const unreadBadge = unreadCount > 9 ? "9+" : String(unreadCount)
 
-  const handleNotificationClick = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((notification) => (notification.id === id ? { ...notification, read: true } : notification)),
-    )
+  const handleNotificationClick = async (id: string) => {
+    const notification = notifications.find((n) => n.id === id)
+    if (notification?.isRead) return
+
+    const updated = await markNotificationAsRead(id)
+    if (updated) {
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
+      )
+    }
+  }
+
+  const handleNotificationDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const success = await deleteNotification(id)
+    if (success) {
+      setNotifications((prev) => prev.filter((n) => n.id !== id))
+    }
+  }
+
+  const formatNotificationTime = (createdAt: string) => {
+    const date = new Date(createdAt)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return "방금 전"
+    if (diffMins < 60) return `${diffMins}분 전`
+    if (diffHours < 24) return `${diffHours}시간 전`
+    if (diffDays < 7) return `${diffDays}일 전`
+    return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" })
   }
 
   const monthLabel = new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long" })
@@ -472,29 +515,41 @@ export default function HomePage() {
           <DialogHeader>
             <DialogTitle>알림</DialogTitle>
           </DialogHeader>
-          <div className="space-y-2">
-            {notifications.length === 0 ? (
-              <p className="text-sm text-muted-foreground">새 알림이 없어요</p>
+          <p className="text-xs text-muted-foreground -mt-2 mb-2">최근 7일간의 알림만 표시됩니다.</p>
+          <div className="space-y-2 max-h-80 overflow-y-auto">
+            {isLoadingNotifications ? (
+              <p className="text-sm text-muted-foreground text-center py-4">로딩 중...</p>
+            ) : notifications.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">새 알림이 없어요</p>
             ) : (
               notifications.map((notification) => (
-                <button
+                <div
                   key={notification.id}
-                  type="button"
                   onClick={() => handleNotificationClick(notification.id)}
-                  className={`w-full rounded-lg border px-3 py-2 text-left transition ${
-                    notification.read ? "border-border bg-background" : "border-primary/30 bg-primary/5"
+                  className={`w-full rounded-lg border px-3 py-2 text-left transition cursor-pointer ${
+                    notification.isRead ? "border-border bg-background" : "border-primary/30 bg-primary/5"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0 space-y-1">
                       <p className="text-sm font-medium text-foreground">{notification.title}</p>
                       <p className="text-xs text-muted-foreground">{notification.body}</p>
                     </div>
-                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                      {notification.createdAt}
-                    </span>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                        {formatNotificationTime(notification.createdAt)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => handleNotificationDelete(notification.id, e)}
+                        className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition"
+                        aria-label="알림 삭제"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-                </button>
+                </div>
               ))
             )}
           </div>
