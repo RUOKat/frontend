@@ -256,7 +256,7 @@ export default function HomePage() {
 
   if (scheduledDaySet.size > 0) {
     for (let day = 1; day <= daysInMonth; day += 1) {
-      const dayIndex = new Date(year, monthIndex, day).getDay()
+      const dayIndex = new Date(year, monthIndex, day).getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6
       if (scheduledDaySet.has(dayIndex)) {
         surveyTargetDays.add(day)
       }
@@ -268,7 +268,7 @@ export default function HomePage() {
     monthlyCare.completedDays.forEach((dateISO) => {
       const [dateYear, dateMonth, dateDay] = dateISO.split("-").map(Number)
       if (dateYear !== year || dateMonth !== monthIndex + 1) return
-      const dayIndex = new Date(dateYear, dateMonth - 1, dateDay).getDay()
+      const dayIndex = new Date(dateYear, dateMonth - 1, dateDay).getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6
       if (scheduledDaySet.has(dayIndex)) {
         surveyCompletedDays.add(dateDay)
       }
@@ -283,7 +283,7 @@ export default function HomePage() {
     : Math.round(monthlyCare.completionRate * 100)
   const todayISO = formatISODate(year, monthIndex, now.getDate())
   const needsSurveyToday =
-    hasSchedule && scheduledDaySet.has(now.getDay()) && !monthlyCare.completedDays.includes(todayISO)
+    hasSchedule && scheduledDaySet.has(now.getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6) && !monthlyCare.completedDays.includes(todayISO)
   const firstDayIndex = new Date(year, monthIndex, 1).getDay()
   const totalCells = Math.ceil((firstDayIndex + daysInMonth) / 7) * 7
   const completedSet = new Set(monthlyCare.completedDays)

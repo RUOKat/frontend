@@ -413,7 +413,7 @@ export default function CatProfilePage() {
     }
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!isValid) {
       setShowValidation(true)
       return
@@ -473,7 +473,7 @@ export default function CatProfilePage() {
     }
 
     if (isCreating) {
-      addCat(profile)
+      await addCat(profile)
     } else {
       updateCat(profile)
     }

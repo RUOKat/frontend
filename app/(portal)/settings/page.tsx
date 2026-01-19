@@ -27,6 +27,7 @@ export default function SettingsPage() {
 
   const catCount = cats.length
   const loginMethodLabel = user?.email ? "이메일" : "데모"
+  const truncatedName = user?.name && user.name.length > 15 ? `${user.name.slice(0, 15)}...` : user?.name || "집사님"
 
   const adoptionPathLabel = activeCat?.adoptionPath?.toLowerCase() ?? ""
   const adoptionSource = activeCat?.adoptionSource
@@ -108,7 +109,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-lg font-semibold text-foreground">{user?.name || "집사님"}</p>
+                    <p className="text-lg font-semibold text-foreground">{truncatedName}</p>
                     <Button asChild variant="outline" size="sm" className="text-xs h-8 px-3">
                       <Link href="/settings/profile">프로필 편집</Link>
                     </Button>

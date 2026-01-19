@@ -20,7 +20,7 @@ interface ActiveCatContextType {
   activeCatId: string | null
   activeCat: CatProfile | null
   setActiveCatId: (id: string) => void
-  addCat: (profile: CatProfile) => void
+  addCat: (profile: CatProfile) => Promise<string | undefined>
   updateCat: (profile: CatProfile, skipBackendSync?: boolean) => void
   deleteCat: (catId: string) => Promise<boolean>
   syncWithBackend: () => Promise<void>
@@ -176,16 +176,17 @@ export function ActiveCatProvider({ children }: { children: ReactNode }) {
 
   const addCat = useCallback(async (profile: CatProfile) => {
     const normalized = ensureCatId(profile)
+    const localId = normalized.id
     
     // 로컬 저장
     setCatsState((prev) => {
-      const filtered = prev.filter((cat) => cat.id !== normalized.id)
+      const filtered = prev.filter((cat) => cat.id !== localId)
       const next = [normalized, ...filtered]
       saveCats(next)
       return next
     })
-    if (normalized.id) {
-      setActiveCatId(normalized.id)
+    if (localId) {
+      setActiveCatId(localId)
     }
 
     // 백엔드에 생성
@@ -193,24 +194,23 @@ export function ActiveCatProvider({ children }: { children: ReactNode }) {
     if (accessToken) {
       try {
         const created = await createPet(normalized)
-        if (created) {
-          // 백엔드에서 생성된 ID로 업데이트
+        if (created && created.id) {
+          // 백엔드에서 생성된 ID로 완전히 교체
           setCatsState((prev) => {
-            const next = prev.map((cat) => 
-              cat.id === normalized.id ? { ...cat, ...created } : cat
-            )
+            const filtered = prev.filter((cat) => cat.id !== localId)
+            const next = [created, ...filtered]
             saveCats(next)
             return next
           })
-          if (created.id) {
-            setActiveCatId(created.id)
-          }
-          console.log("✅ 백엔드에 펫 생성 완료:", created.id)
+          setActiveCatId(created.id)
+          console.log("✅ 백엔드에 펫 생성 완료:", created.id, "(로컬 ID:", localId, ")")
+          return created.id // 백엔드 ID 반환
         }
       } catch (error) {
         console.error("백엔드 펫 생성 실패:", error)
       }
     }
+    return localId // 백엔드 실패 시 로컬 ID 반환
   }, [])
 
   const updateCat = useCallback(async (profile: CatProfile, skipBackendSync = false) => {

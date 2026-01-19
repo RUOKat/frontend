@@ -7,6 +7,7 @@ import { mockUser } from "@/lib/mock"
 import { clearCodeVerifier, clearOAuthState, getCognitoLogoutUrl, isCognitoConfigured } from "@/lib/cognito"
 import { getMe } from "@/lib/backend-auth"
 import { getTokens } from "@/lib/backend"
+import { updatePushToken } from "@/lib/backend-users"
 
 interface AuthContextType extends AuthState {
   backendSync: BackendSyncStatus
@@ -123,7 +124,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const storedAuth = loadAuth<AuthState>()
         const storedUser = storedAuth?.user
-        const mergedUser = storedUser ? { ...user, ...storedUser } : user
+        // 백엔드 정보를 우선하고, 없는 필드만 로컬 정보로 채움
+        const mergedUser = storedUser ? { ...storedUser, ...user } : user
         const newState: AuthState = {
           isAuthenticated: true,
           user: mergedUser,
@@ -135,6 +137,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthState(newState)
         saveAuth(newState)
         setBackendSync("ok")
+
+        // auth/me 성공 후 push token 전송 (WebView 환경에서만)
+        try {
+          const expoPushToken = sessionStorage.getItem("expo_push_token") || ""
+          const deviceId = sessionStorage.getItem("device_id") || ""
+          
+          if (expoPushToken) {
+            const deviceInfo = deviceId ? { deviceId } : undefined
+            await updatePushToken(expoPushToken, deviceInfo)
+          }
+        } catch (pushError) {
+          console.error("푸시 토큰 전송 실패:", pushError)
+          // 푸시 토큰 전송 실패는 무시 (로그인은 성공)
+        }
+        
       } catch (error) {
         const status = typeof error === "object" && error ? (error as { status?: number }).status : undefined
         console.error("Backend sync failed", { status, error })
