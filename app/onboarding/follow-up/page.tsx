@@ -11,10 +11,11 @@ import { computeRiskStatus } from "@/lib/risk"
 import { getCategoryName } from "@/lib/triage"
 import type { OnboardingAnswers } from "@/lib/types"
 import { Stethoscope, ArrowRight, ArrowLeft, HelpCircle, AlertTriangle } from "lucide-react"
+import { submitDiag } from "@/lib/backend-care"
 
 export default function FollowUpPage() {
   const router = useRouter()
-  const { activeCat } = useActiveCat()
+  const { activeCat, activeCatId } = useActiveCat()
   const { onboardingAnswers, followUpPlan, setFollowUpAnswers, setRiskStatus } = useOnboarding()
 
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -61,21 +62,31 @@ export default function FollowUpPage() {
   }
 
   const handleComplete = async () => {
-    if (!activeCat || !onboardingAnswers) return
+    if (!activeCat || !onboardingAnswers || !activeCatId) return
 
     setIsSubmitting(true)
-    setFollowUpAnswers(answers)
+    
+    try {
+      // 1. 답변 저장
+      setFollowUpAnswers(answers)
 
-    // 1. 답변 저장
-    setFollowUpAnswers(answers)
+      // 2. 백엔드에 진단 기록 저장 (diagQuestions + diagAnswers)
+      await submitDiag(activeCatId, questions, answers)
 
-    // 2. 위험도 계산
-    const risk = computeRiskStatus(activeCat, onboardingAnswers, followUpPlan, answers)
-    setRiskStatus(risk)
-    router.push("/")
+      // 3. 위험도 계산
+      const risk = computeRiskStatus(activeCat, onboardingAnswers, followUpPlan, answers)
+      setRiskStatus(risk)
 
-    // 4. 홈으로
-    router.push("/")
+      // 4. 홈으로
+      router.push("/")
+    } catch (error) {
+      console.error('Failed to submit diagnosis:', error)
+      setIsSubmitting(false)
+      // Still allow navigation even if API fails
+      const risk = computeRiskStatus(activeCat, onboardingAnswers, followUpPlan, answers)
+      setRiskStatus(risk)
+      router.push("/")
+    }
   }
 
   return (

@@ -13,6 +13,7 @@ import { computeRiskStatus } from "@/lib/risk"
 import { getTodayISO, updateMonthlyCare } from "@/lib/care-monthly"
 import type { Question, OnboardingAnswers } from "@/lib/types"
 import { MessageCircle, ArrowRight, ArrowLeft, HelpCircle } from "lucide-react"
+import { submitCheckIn } from "@/lib/backend-care"
 
 export default function QuestionsPage() {
   const router = useRouter()
@@ -26,8 +27,9 @@ export default function QuestionsPage() {
 
   useEffect(() => {
     if (activeCat) {
-      const generatedQuestions = generateOnboardingQuestions(activeCat)
-      setQuestions(generatedQuestions)
+      generateOnboardingQuestions(activeCat).then(generatedQuestions => {
+        setQuestions(generatedQuestions)
+      })
     }
   }, [activeCat])
 
@@ -61,27 +63,46 @@ export default function QuestionsPage() {
   }
 
   const handleComplete = async () => {
-    if (!activeCat) return
+    if (!activeCat || !activeCatId) return
 
     setIsSubmitting(true)
-    setOnboardingAnswers(answers)
+    
+    try {
+      // 1. 답변 저장
+      setOnboardingAnswers(answers)
 
-    // 1. 답변 저장
-    setOnboardingAnswers(answers)
+      // 2. 백엔드에 체크인 기록 저장 (questions + answers)
+      await submitCheckIn(activeCatId, questions, answers)
 
-    // 2. 의심 평가
-    const followUp = evaluateSuspicion(activeCat, answers)
-    updateMonthlyCare(getTodayISO(), activeCatId ?? undefined)
+      // 3. 의심 평가
+      const followUp = await evaluateSuspicion(activeCat, answers)
+      updateMonthlyCare(getTodayISO(), activeCatId ?? undefined)
 
-    if (followUp) {
-      // 의심 징후가 있으면 follow-up 필요
-      setFollowUpPlan(followUp)
-      router.push("/onboarding/follow-up")
-    } else {
-      // 의심 징후 없으면 바로 완료
-      const risk = computeRiskStatus(activeCat, answers, null, null)
-      setRiskStatus(risk)
-      router.push("/")
+      if (followUp) {
+        // 의심 징후가 있으면 follow-up 필요
+        setFollowUpPlan(followUp)
+        router.push("/onboarding/follow-up")
+      } else {
+        // 의심 징후 없으면 바로 완료
+        const risk = computeRiskStatus(activeCat, answers, null, null)
+        setRiskStatus(risk)
+        router.push("/")
+      }
+    } catch (error) {
+      console.error('Failed to submit check-in:', error)
+      setIsSubmitting(false)
+      // Still allow navigation even if API fails
+      const followUp = await evaluateSuspicion(activeCat, answers)
+      updateMonthlyCare(getTodayISO(), activeCatId ?? undefined)
+
+      if (followUp) {
+        setFollowUpPlan(followUp)
+        router.push("/onboarding/follow-up")
+      } else {
+        const risk = computeRiskStatus(activeCat, answers, null, null)
+        setRiskStatus(risk)
+        router.push("/")
+      }
     }
   }
 

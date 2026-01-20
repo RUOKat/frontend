@@ -1,22 +1,43 @@
 import type { CatProfile, Question } from "./types"
-import questionsData from "./questions.json"
 import { normalizeMedicalHistory } from "./medical-history"
+import { fetchQuestions, type QuestionsData } from "./backend-care"
 
 type FollowUpCategory = "FLUTD" | "CKD" | "GI" | "PAIN"
 
-type QuestionsData = {
-  onboarding: Record<string, Question>
-  followUp: Record<FollowUpCategory, Question[]>
+let questionBank: QuestionsData | null = null
+
+async function loadQuestions(): Promise<QuestionsData> {
+  if (questionBank) {
+    return questionBank
+  }
+
+  try {
+    questionBank = await fetchQuestions()
+    return questionBank
+  } catch (error) {
+    console.error('Failed to load questions from backend:', error)
+    // Fallback to empty data if backend fails
+    return {
+      onboarding: {},
+      followUp: {}
+    }
+  }
 }
 
-const questionBank = questionsData as QuestionsData
-
-function getOnboardingQuestion(id: string): Question {
-  return questionBank.onboarding[id]
+function getOnboardingQuestion(id: string, questions: QuestionsData): Question | undefined {
+  return questions.onboarding?.[id]
 }
 
-export function generateOnboardingQuestions(catProfile: CatProfile): Question[] {
+export async function generateOnboardingQuestions(catProfile: CatProfile): Promise<Question[]> {
+  const questionsData = await loadQuestions()
   const questions: Question[] = []
+
+  // Validate questionsData structure
+  if (!questionsData || !questionsData.onboarding) {
+    console.error('Invalid questions data structure:', questionsData)
+    return []
+  }
+
   const age = catProfile.birthDate
     ? Math.floor((Date.now() - new Date(catProfile.birthDate).getTime()) / (1000 * 60 * 60 * 24 * 365))
     : catProfile.estimatedAge
@@ -27,31 +48,49 @@ export function generateOnboardingQuestions(catProfile: CatProfile): Question[] 
   const hasCkdHistory = medicalHistory?.selectedItemIds.includes("ckd") ?? false
   const hasMusculoskeletalHistory = medicalHistory?.selectedGroupIds.includes("musculoskeletal") ?? false
 
+  let question: Question | undefined
+
   if (catProfile.gender === "male" || hasRenalUrinaryHistory) {
-    questions.push(getOnboardingQuestion("q1_urinary_male"))
+    question = getOnboardingQuestion("q1_urinary_male", questionsData)
+    if (question) questions.push(question)
   } else {
-    questions.push(getOnboardingQuestion("q1_urinary_general"))
+    question = getOnboardingQuestion("q1_urinary_general", questionsData)
+    if (question) questions.push(question)
   }
 
   if (age >= 7 || hasRenalUrinaryHistory || hasCkdHistory) {
-    questions.push(getOnboardingQuestion("q2_water_senior"))
+    question = getOnboardingQuestion("q2_water_senior", questionsData)
+    if (question) questions.push(question)
   } else {
-    questions.push(getOnboardingQuestion("q2_water_general"))
+    question = getOnboardingQuestion("q2_water_general", questionsData)
+    if (question) questions.push(question)
   }
 
-  questions.push(getOnboardingQuestion("q3_vomiting"))
+  question = getOnboardingQuestion("q3_vomiting", questionsData)
+  if (question) questions.push(question)
 
   if (age >= 10 || hasMusculoskeletalHistory) {
-    questions.push(getOnboardingQuestion("q4_mobility_senior"))
+    question = getOnboardingQuestion("q4_mobility_senior", questionsData)
+    if (question) questions.push(question)
   } else {
-    questions.push(getOnboardingQuestion("q4_activity_general"))
+    question = getOnboardingQuestion("q4_activity_general", questionsData)
+    if (question) questions.push(question)
   }
 
-  questions.push(getOnboardingQuestion("q5_appetite"))
+  question = getOnboardingQuestion("q5_appetite", questionsData)
+  if (question) questions.push(question)
 
   return questions
 }
 
-export function getFollowUpQuestions(category: FollowUpCategory): Question[] {
-  return questionBank.followUp[category] || []
+export async function getFollowUpQuestions(category: FollowUpCategory): Promise<Question[]> {
+  const questionsData = await loadQuestions()
+
+  // Validate questionsData structure
+  if (!questionsData || !questionsData.followUp) {
+    console.error('Invalid questions data structure for followUp:', questionsData)
+    return []
+  }
+
+  return questionsData.followUp[category] || []
 }

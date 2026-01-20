@@ -9,7 +9,7 @@ interface CategoryScore {
 }
 
 // 의심 징후 평가
-export function evaluateSuspicion(catProfile: CatProfile, onboardingAnswers: OnboardingAnswers): FollowUpPlan | null {
+export async function evaluateSuspicion(catProfile: CatProfile, onboardingAnswers: OnboardingAnswers): Promise<FollowUpPlan | null> {
   const scores: CategoryScore[] = [
     { category: "FLUTD", score: 0, reasons: [] },
     { category: "CKD", score: 0, reasons: [] },
@@ -134,11 +134,13 @@ export function evaluateSuspicion(catProfile: CatProfile, onboardingAnswers: Onb
   }
 
   // Follow-up 계획 생성
+  const questions = await getFollowUpQuestions(topCategory.category)
+
   return {
     category: topCategory.category,
     score: topCategory.score,
     reasonSummary: topCategory.reasons.join(", "),
-    questions: getFollowUpQuestions(topCategory.category),
+    questions,
   }
 }
 

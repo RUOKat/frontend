@@ -8,11 +8,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { CheckinPopup } from "@/components/app/checkin-popup"
 import { CatSelector } from "@/components/app/cat-selector"
 import { useActiveCat } from "@/contexts/active-cat-context"
-import { getMonthlyCareForDate, type MonthlyCareRecord } from "@/lib/care-monthly"
+import { fetchMonthlyCare } from "@/lib/backend-care"
 import { Calendar, Gift, MessageCircle, ExternalLink, Bell, Trash2 } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
 import { fetchNotifications, markNotificationAsRead, deleteNotification, type Notification } from "@/lib/backend-notifications"
 import { getTokens } from "@/lib/backend"
+
+type MonthlyCareRecord = {
+  completedDays: string[]
+  streak: number
+  completionRate: number
+}
 
 const stampImages = [
   "/stamps/cat-stamp-1.png",
@@ -45,6 +51,36 @@ export default function HomePage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false)
 
+  // 월간 케어 기록 로드
+  const loadMonthlyCare = useCallback(async () => {
+    if (!activeCatId) return
+
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth() + 1
+
+    try {
+      const data = await fetchMonthlyCare(activeCatId, year, month)
+      setMonthlyCare({
+        completedDays: data.completedDays,
+        streak: 0,
+        completionRate: data.completedDays.length / now.getDate(),
+      })
+    } catch (error) {
+      console.error('Failed to load monthly care:', error)
+      setMonthlyCare({
+        completedDays: [],
+        streak: 0,
+        completionRate: 0,
+      })
+    }
+  }, [activeCatId])
+
+  // 초기 로드 및 activeCatId 변경 시 로드
+  useEffect(() => {
+    loadMonthlyCare()
+  }, [loadMonthlyCare])
+
   // 알림 목록 로드
   const loadNotifications = useCallback(async () => {
     const { accessToken } = getTokens()
@@ -70,10 +106,6 @@ export default function HomePage() {
   useEffect(() => {
     loadNotifications()
   }, [loadNotifications])
-
-  useEffect(() => {
-    setMonthlyCare(getMonthlyCareForDate(new Date(), activeCatId ?? undefined))
-  }, [activeCatId])
 
   useEffect(() => {
     let isActive = true
@@ -327,7 +359,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <CheckinPopup catId={activeCatId} catName={activeCat?.name} onCheckinSaved={setMonthlyCare} />
+      <CheckinPopup catId={activeCatId} catName={activeCat?.name} onCheckinSaved={loadMonthlyCare} />
       {/* 헤더 */}
       <header className="bg-primary text-primary-foreground px-6 pt-safe-top pb-8">
         <div className="py-4">
@@ -454,25 +486,23 @@ export default function HomePage() {
 
       </main>
 
-      <Button
-        asChild
-        className={`fixed bottom-24 right-4 z-40 h-12 rounded-full px-5 shadow-lg ${
-          needsSurveyToday ? "cta-nudge" : ""
-        }`}
-        aria-label="진단 설문"
-      >
-        <Link href="/onboarding/questions">
-          <span className="relative inline-flex items-center">
-            <MessageCircle className="w-4 h-4 mr-2" />
-            진단 설문
-            {needsSurveyToday && (
+      {needsSurveyToday && (
+        <Button
+          asChild
+          className="fixed bottom-24 right-4 z-40 h-12 rounded-full px-5 shadow-lg cta-nudge"
+          aria-label="진단 설문"
+        >
+          <Link href="/onboarding/questions">
+            <span className="relative inline-flex items-center">
+              <MessageCircle className="w-4 h-4 mr-2" />
+              진단 설문
               <span className="cta-badge" aria-hidden="true">
                 !
               </span>
-            )}
-          </span>
-        </Link>
-      </Button>
+            </span>
+          </Link>
+        </Button>
+      )}
 
       <Dialog open={tipOpen} onOpenChange={setTipOpen}>
         <DialogContent className="sm:max-w-lg">
