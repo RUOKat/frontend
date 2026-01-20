@@ -67,22 +67,51 @@ function extractUser(payload: unknown): User | null {
   if (payload && typeof payload === "object") {
     const maybePayload = payload as {
       success?: boolean
-      data?: { id?: unknown; sub?: unknown; email?: unknown; name?: unknown }
+      data?: Record<string, unknown>
       user?: unknown
+      // 직접 반환된 user 객체의 필드들
+      id?: unknown
+      sub?: unknown
+      email?: unknown
+      name?: unknown
     }
 
+    // {success: true, data: {...}} 형식
     if (maybePayload.success === true && maybePayload.data && typeof maybePayload.data === "object") {
-      const data = maybePayload.data as { id?: unknown; sub?: unknown; email?: unknown; name?: unknown }
-      const sub = typeof data.sub === "string" ? data.sub : undefined
+      const data = maybePayload.data
+      const sub = typeof data.sub === "string" ? data.sub : (typeof data.cognitoSub === "string" ? data.cognitoSub : undefined)
       if (!sub) return null
       const id = typeof data.id === "string" ? data.id : sub
       const email = typeof data.email === "string" ? data.email : undefined
       const name = typeof data.name === "string" ? data.name : undefined
-      return { id, sub, email, name }
+      const nickname = typeof data.nickname === "string" ? data.nickname : undefined
+      const phone = typeof data.phone === "string" ? data.phone : (typeof data.phoneNumber === "string" ? data.phoneNumber : undefined)
+      const address = typeof data.address === "string" ? data.address : undefined
+      const profilePhoto = typeof data.profilePhoto === "string" ? data.profilePhoto : undefined
+      const notificationsEnabled = typeof data.alarmsEnabled === "boolean" ? data.alarmsEnabled : true
+      
+      return { id, sub, email, name, nickname, phone, address, profilePhoto, notificationsEnabled }
     }
 
-    if ("user" in maybePayload) {
+    // {user: {...}} 형식
+    if ("user" in maybePayload && maybePayload.user) {
       return isUser(maybePayload.user) ? maybePayload.user : null
+    }
+
+    // 직접 반환된 user 객체 (백엔드 /auth/me 응답)
+    const sub = typeof maybePayload.sub === "string" ? maybePayload.sub : undefined
+    if (sub) {
+      const data = maybePayload as Record<string, unknown>
+      const id = typeof data.id === "string" ? data.id : sub
+      const email = typeof data.email === "string" ? data.email : undefined
+      const name = typeof data.name === "string" ? data.name : undefined
+      const nickname = typeof data.nickname === "string" ? data.nickname : undefined
+      const phone = typeof data.phone === "string" ? data.phone : (typeof data.phoneNumber === "string" ? data.phoneNumber : undefined)
+      const address = typeof data.address === "string" ? data.address : undefined
+      const profilePhoto = typeof data.profilePhoto === "string" ? data.profilePhoto : undefined
+      const notificationsEnabled = typeof data.alarmsEnabled === "boolean" ? data.alarmsEnabled : true
+      
+      return { id, sub, email, name, nickname, phone, address, profilePhoto, notificationsEnabled }
     }
   }
 

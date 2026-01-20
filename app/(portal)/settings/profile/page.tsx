@@ -30,6 +30,7 @@ import { Switch } from "@/components/ui/switch"
 import { useAuth } from "@/contexts/auth-context"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { uploadImage } from "@/lib/backend-uploads"
+import { updateMyProfile } from "@/lib/backend-users"
 
 export default function UserProfileEditPage() {
   const router = useRouter()
@@ -53,6 +54,7 @@ export default function UserProfileEditPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
   // 케어 공유 관련 상태 계산
   const adoptionPathLabel = activeCat?.adoptionPath?.toLowerCase() ?? ""
@@ -115,6 +117,7 @@ export default function UserProfileEditPage() {
   const handleSave = async () => {
     if (!user) return
 
+    setIsSaving(true)
     let finalProfilePhoto = profilePhoto
 
     // 새 이미지 파일이 있으면 업로드
@@ -129,12 +132,32 @@ export default function UserProfileEditPage() {
       }
     }
 
-    updateUser({
-      name: name.trim() || user.name,
-      address: address.trim() || undefined,
-      phone: phone.trim() || undefined,
-      profilePhoto: finalProfilePhoto || undefined,
-    })
+    // 백엔드 API 호출
+    try {
+      const updatedProfile = await updateMyProfile({
+        name: name.trim() || undefined,
+        address: address.trim() || undefined,
+        phone: phone.trim() || undefined,
+        profilePhoto: finalProfilePhoto || undefined,
+        alarmsEnabled: notificationsEnabled,
+      })
+
+      if (updatedProfile) {
+        // 로컬 상태도 업데이트
+        updateUser({
+          name: updatedProfile.name || user.name,
+          address: updatedProfile.address || undefined,
+          phone: updatedProfile.phone || undefined,
+          profilePhoto: updatedProfile.profilePhoto || undefined,
+          notificationsEnabled: updatedProfile.alarmsEnabled ?? true,
+        })
+      }
+    } catch (error) {
+      console.error('Failed to update profile:', error)
+    } finally {
+      setIsSaving(false)
+    }
+
     router.push("/settings")
   }
 
@@ -296,8 +319,8 @@ export default function UserProfileEditPage() {
               <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="010-0000-0000" />
             </div>
 
-            <Button className="w-full" onClick={handleSave}>
-              저장
+            <Button className="w-full" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? "저장 중..." : "저장"}
             </Button>
           </CardContent>
         </Card>

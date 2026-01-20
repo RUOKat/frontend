@@ -235,7 +235,40 @@ export function loadVetVisits<T>(catId?: string): T[] {
 
 // 전체 초기화
 export function clearAllData(): void {
+  // localStorage 초기화
   Object.values(STORAGE_KEYS).forEach((key) => {
     safeRemoveItem(key)
   })
+
+  // sessionStorage 초기화 (개인정보 및 애완동물 정보)
+  if (typeof window !== "undefined") {
+    try {
+      // 토큰 관련
+      sessionStorage.removeItem("id_token")
+      sessionStorage.removeItem("access_token")
+      sessionStorage.removeItem("refresh_token")
+
+      // OAuth 관련
+      sessionStorage.removeItem("oauth_code_verifier")
+      sessionStorage.removeItem("oauth_state")
+
+      // oauth_code_used: 로 시작하는 모든 키 삭제
+      for (let i = sessionStorage.length - 1; i >= 0; i -= 1) {
+        const key = sessionStorage.key(i)
+        if (key?.startsWith("oauth_code_used:")) {
+          sessionStorage.removeItem(key)
+        }
+      }
+
+      // areyouokat_ 로 시작하는 모든 sessionStorage 키 삭제
+      for (let i = sessionStorage.length - 1; i >= 0; i -= 1) {
+        const key = sessionStorage.key(i)
+        if (key?.startsWith("areyouokat_")) {
+          sessionStorage.removeItem(key)
+        }
+      }
+    } catch (e) {
+      console.error("sessionStorage 초기화 실패:", e)
+    }
+  }
 }

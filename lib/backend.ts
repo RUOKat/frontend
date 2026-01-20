@@ -1,5 +1,7 @@
 "use client"
 
+import { clearAllData } from "./storage"
+
 export const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_BASE_URL ?? "http://192.168.0.140:3001/api"
 
 type BackendTokens = {
@@ -21,13 +23,8 @@ function clearTokensAndRedirect(): void {
   if (typeof window === "undefined") return
 
   try {
-    // 세션 스토리지 토큰 삭제
-    sessionStorage.removeItem("access_token")
-    sessionStorage.removeItem("id_token")
-    sessionStorage.removeItem("refresh_token")
-
-    // 로컬 스토리지 인증 정보 삭제
-    localStorage.removeItem("areyouokat_auth")
+    // 모든 로컬/세션 스토리지 데이터 삭제
+    clearAllData()
 
     // 로그인 페이지로 리다이렉트
     window.location.href = "/auth/sign-in"

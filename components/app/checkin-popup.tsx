@@ -46,7 +46,12 @@ interface CheckinPopupProps {
   onCheckinSaved?: (record: MonthlyCareRecord) => void
 }
 
+// 체크인 팝업 비활성화됨 - 나중에 활성화하려면 아래 주석 해제
 export function CheckinPopup({ catId, catName, onCheckinSaved }: CheckinPopupProps) {
+  // 비활성화: 항상 null 반환
+  return null
+
+  /* 체크인 팝업 원본 코드 - 비활성화됨
   const { onboardingCompleted } = useOnboarding()
   const [open, setOpen] = useState(false)
   const [answers, setAnswers] = useState<Record<string, string>>({})
@@ -135,4 +140,5 @@ export function CheckinPopup({ catId, catName, onCheckinSaved }: CheckinPopupPro
       </DialogContent>
     </Dialog>
   )
+  */
 }
