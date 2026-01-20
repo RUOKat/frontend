@@ -1,0 +1,67 @@
+name: Frontend CI (Build & Push)
+
+on:
+  push:
+    branches: [ "main" ]  # 프론트엔드 배포 브랜치
+
+permissions:
+  id-token: write  # AWS OIDC 필수
+  contents: read
+
+env:
+  AWS_REGION: ap-northeast-2
+  SECRET_ID: dev/ruokat/infra-bundle # Secrets Manager ID
+  ECR_REPOSITORY: ruokat/frontend    # ⚠️ [수정필요] 실제 ECR 리포지토리 이름
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1. AWS 인증
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # 2. Secrets Manager에서 환경변수 가져오기 (기존 로직 유지)
+      - name: Get KMS-Decrypted Secrets
+        id: secrets
+        run: |
+          SECRET_VALUE=$(aws secretsmanager get-secret-value \
+            --secret-id ${{ env.SECRET_ID }} \
+            --query SecretString --output text)
+
+          # 변수 파싱 및 마스킹
+          for key in NEXT_PUBLIC_COGNITO_DOMAIN NEXT_PUBLIC_COGNITO_CLIENT_ID NEXT_PUBLIC_COGNITO_REDIRECT_SIGNIN NEXT_PUBLIC_COGNITO_REDIRECT_SIGNOUT NEXT_PUBLIC_BACKEND_BASE_URL; do
+            VALUE=$(echo $SECRET_VALUE | jq -r ".$key")
+            echo "::add-mask::$VALUE"
+            echo "$key=$VALUE" >> $GITHUB_OUTPUT
+          done
+
+      # 3. ECR 로그인
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # 4. 도커 빌드 & 푸시
+      - name: Build & Push
+        # working-directory 삭제됨 (루트 기준)
+        run: |
+          IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+          
+          docker build \
+            --build-arg NEXT_PUBLIC_AWS_REGION=${{ env.AWS_REGION }} \
+            --build-arg NEXT_PUBLIC_COGNITO_DOMAIN=${{ steps.secrets.outputs.NEXT_PUBLIC_COGNITO_DOMAIN }} \
+            --build-arg NEXT_PUBLIC_COGNITO_CLIENT_ID=${{ steps.secrets.outputs.NEXT_PUBLIC_COGNITO_CLIENT_ID }} \
+            --build-arg NEXT_PUBLIC_COGNITO_REDIRECT_SIGNIN=${{ steps.secrets.outputs.NEXT_PUBLIC_COGNITO_REDIRECT_SIGNIN }} \
+            --build-arg NEXT_PUBLIC_COGNITO_REDIRECT_SIGNOUT=${{ steps.secrets.outputs.NEXT_PUBLIC_COGNITO_REDIRECT_SIGNOUT }} \
+            --build-arg NEXT_PUBLIC_COGNITO_SCOPES="openid email profile" \
+            --build-arg NEXT_PUBLIC_BACKEND_BASE_URL=${{ steps.secrets.outputs.NEXT_PUBLIC_BACKEND_BASE_URL }} \
+            -t $IMAGE_URI:${{ github.sha }} .
+          
+          docker push $IMAGE_URI:${{ github.sha }}
+          docker tag $IMAGE_URI:${{ github.sha }} $IMAGE_URI:latest
+          docker push $IMAGE_URI:latest
