@@ -8,8 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { CheckinPopup } from "@/components/app/checkin-popup"
 import { CatSelector } from "@/components/app/cat-selector"
 import { useActiveCat } from "@/contexts/active-cat-context"
-import { fetchMonthlyCare } from "@/lib/backend-care"
-import { Calendar, Gift, MessageCircle, ExternalLink, Bell, Trash2 } from "lucide-react"
+import { fetchMonthlyCare, fetchCareLogByDate, type CareLog } from "@/lib/backend-care"
+import { Calendar, Gift, MessageCircle, ExternalLink, Bell, Trash2, Loader2 } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
 import { fetchNotifications, markNotificationAsRead, deleteNotification, type Notification } from "@/lib/backend-notifications"
 import { getTokens } from "@/lib/backend"
@@ -50,6 +50,12 @@ export default function HomePage() {
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false)
+  
+  // 케어 로그 다이얼로그 상태
+  const [careLogDialogOpen, setCareLogDialogOpen] = useState(false)
+  const [selectedCareLog, setSelectedCareLog] = useState<CareLog | null>(null)
+  const [isLoadingCareLog, setIsLoadingCareLog] = useState(false)
+  const [selectedDate, setSelectedDate] = useState("")
 
   // 월간 케어 기록 로드
   const loadMonthlyCare = useCallback(async () => {
@@ -101,6 +107,25 @@ export default function HomePage() {
       loadNotifications()
     }
   }, [notificationsOpen, loadNotifications])
+
+  // 완료된 날짜 클릭 시 케어 로그 조회
+  const handleDayClick = useCallback(async (dateISO: string) => {
+    if (!activeCatId) return
+    
+    setSelectedDate(dateISO)
+    setCareLogDialogOpen(true)
+    setIsLoadingCareLog(true)
+    setSelectedCareLog(null)
+    
+    try {
+      const careLog = await fetchCareLogByDate(activeCatId, dateISO)
+      setSelectedCareLog(careLog)
+    } catch (error) {
+      console.error('Failed to load care log:', error)
+    } finally {
+      setIsLoadingCareLog(false)
+    }
+  }, [activeCatId])
 
   // 초기 로드 (뱃지 카운트용)
   useEffect(() => {
@@ -314,8 +339,10 @@ export default function HomePage() {
     ? Math.round((completedSurveyDays / Math.max(1, targetDays)) * 100)
     : Math.round(monthlyCare.completionRate * 100)
   const todayISO = formatISODate(year, monthIndex, now.getDate())
-  const needsSurveyToday =
-    hasSchedule && scheduledDaySet.has(now.getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6) && !monthlyCare.completedDays.includes(todayISO)
+  // 스케줄이 있으면 스케줄된 날에만, 없으면 오늘 기록이 없으면 버튼 표시
+  const needsSurveyToday = hasSchedule 
+    ? scheduledDaySet.has(now.getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6) && !monthlyCare.completedDays.includes(todayISO)
+    : !monthlyCare.completedDays.includes(todayISO)
   const firstDayIndex = new Date(year, monthIndex, 1).getDay()
   const totalCells = Math.ceil((firstDayIndex + daysInMonth) / 7) * 7
   const completedSet = new Set(monthlyCare.completedDays)
@@ -327,15 +354,22 @@ export default function HomePage() {
 
     const dateISO = formatISODate(year, monthIndex, dayNumber)
     const isCompleted = completedSet.has(dateISO)
-    const hasSurveyStamp = surveyCompletedDays.has(dayNumber)
+    // 스케줄이 있으면 surveyCompletedDays 확인, 없으면 completedSet 확인
+    const hasSurveyStamp = hasSchedule ? surveyCompletedDays.has(dayNumber) : isCompleted
     const stampSrc = hasSurveyStamp ? stampImages[getStampIndex(dateISO)] : null
     const resolvedStampSrc = stampSrc ? processedStamps[stampSrc] ?? stampSrc : null
+    const isClickable = isCompleted
 
     return (
-      <div
+      <button
         key={dateISO}
-        className={`relative isolate flex aspect-square min-h-[32px] items-center justify-center rounded-md border p-0.5 text-[10px] ${
-          isCompleted ? "border-primary/30 bg-primary/10 text-primary" : "border-border/40 bg-muted/40 text-muted-foreground"
+        type="button"
+        onClick={() => isClickable && handleDayClick(dateISO)}
+        disabled={!isClickable}
+        className={`relative isolate flex aspect-square min-h-[32px] items-center justify-center rounded-md border p-0.5 text-[10px] transition ${
+          isCompleted 
+            ? "border-primary/30 bg-primary/10 text-primary cursor-pointer hover:bg-primary/20" 
+            : "border-border/40 bg-muted/40 text-muted-foreground cursor-default"
         }`}
       >
         {resolvedStampSrc ? (
@@ -353,7 +387,7 @@ export default function HomePage() {
             {isCompleted && <span className="ml-1">✓</span>}
           </span>
         )}
-      </div>
+      </button>
     )
   })
 
@@ -583,6 +617,77 @@ export default function HomePage() {
               ))
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 케어 로그 다이얼로그 */}
+      <Dialog open={careLogDialogOpen} onOpenChange={setCareLogDialogOpen}>
+        <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedDate && new Date(selectedDate).toLocaleDateString("ko-KR", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })} 케어 기록
+            </DialogTitle>
+          </DialogHeader>
+          {isLoadingCareLog ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : selectedCareLog ? (
+            <div className="space-y-4">
+              {/* 체크인 질문/답변 */}
+              {selectedCareLog.questions && selectedCareLog.answers && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">진단 설문 응답</h3>
+                  {Array.isArray(selectedCareLog.questions) && selectedCareLog.questions.map((q: any, idx: number) => {
+                    const answer = selectedCareLog.answers?.[q.id]
+                    const selectedOption = q.options?.find((opt: any) => opt.value === answer)
+                    return (
+                      <div key={q.id || idx} className="rounded-lg border border-border bg-muted/30 p-3 space-y-1">
+                        <p className="text-sm font-medium text-foreground">{q.text}</p>
+                        <p className="text-sm text-primary">
+                          {selectedOption?.label || answer || "응답 없음"}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* 진단 질문/답변 */}
+              {selectedCareLog.diagQuestions && selectedCareLog.diagAnswers && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">추가 진단 응답</h3>
+                  {Array.isArray(selectedCareLog.diagQuestions) && selectedCareLog.diagQuestions.map((q: any, idx: number) => {
+                    const answer = selectedCareLog.diagAnswers?.[q.id]
+                    const selectedOption = q.options?.find((opt: any) => opt.value === answer)
+                    return (
+                      <div key={q.id || idx} className="rounded-lg border border-border bg-muted/30 p-3 space-y-1">
+                        <p className="text-sm font-medium text-foreground">{q.text}</p>
+                        <p className="text-sm text-primary">
+                          {selectedOption?.label || answer || "응답 없음"}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* 데이터가 없는 경우 */}
+              {!selectedCareLog.questions && !selectedCareLog.diagQuestions && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  저장된 응답이 없습니다.
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              케어 기록을 불러올 수 없습니다.
+            </p>
+          )}
         </DialogContent>
       </Dialog>
     </div>

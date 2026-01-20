@@ -34,31 +34,25 @@ export function AuthGuard({ children }: AuthGuardProps) {
       return
     }
 
-    // 인증되어 있고 공개 페이지면 온보딩 상태에 따라 리디렉션
+    // 인증되어 있고 공개 페이지면 (callback 제외) 리디렉션
     if (isAuthenticated && isPublicPath && pathname !== "/auth/callback") {
-        if (cats.length === 0) {
-          router.replace("/onboarding/cat")
-        } else if (!onboardingCompleted) {
-          router.replace("/onboarding/consent")
-        } else {
-          router.replace("/")
+      if (cats.length === 0) {
+        router.replace("/onboarding/cat")
+      } else {
+        // 펫이 있으면 무조건 홈으로
+        router.replace("/")
       }
       return
     }
 
     // 인증되어 있지만 온보딩이 안 되어 있을 때
     if (isAuthenticated && !isOnboardingPath && !isPublicPath) {
-      // 2. catProfile 없으면 /onboarding/cat
+      // catProfile 없으면 /onboarding/cat
       if (cats.length === 0) {
         router.replace("/onboarding/cat")
         return
       }
-
-      // 3. consent 완료 전이면 /onboarding/consent
-      if (!onboardingCompleted) {
-        router.replace("/onboarding/consent")
-        return
-      }
+      // 펫이 있으면 홈 접근 허용 (onboardingCompleted 체크 제거)
     }
 
     // 온보딩 페이지 접근 제어
@@ -78,20 +72,11 @@ export function AuthGuard({ children }: AuthGuardProps) {
           router.replace("/onboarding/cat")
           return
         }
-        if (!onboardingCompleted) {
-          router.replace("/onboarding/consent")
-          return
-        }
         if (!followUpPlan) {
           // followUpPlan이 없으면 홈으로
           router.replace("/")
           return
         }
-      }
-
-      if (pathname === "/onboarding/questions" && !onboardingCompleted) {
-        router.replace("/onboarding/consent")
-        return
       }
     }
   }, [

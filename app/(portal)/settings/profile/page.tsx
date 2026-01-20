@@ -29,6 +29,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { useAuth } from "@/contexts/auth-context"
 import { useActiveCat } from "@/contexts/active-cat-context"
+import { uploadImage } from "@/lib/backend-uploads"
 
 export default function UserProfileEditPage() {
   const router = useRouter()
@@ -39,6 +40,7 @@ export default function UserProfileEditPage() {
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null)
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -93,9 +95,14 @@ export default function UserProfileEditPage() {
     const file = event.target.files?.[0]
     if (!file) {
       setProfilePhoto(null)
+      setProfilePhotoFile(null)
       return
     }
 
+    // 파일 저장 (나중에 업로드용)
+    setProfilePhotoFile(file)
+
+    // 미리보기용 base64
     const reader = new FileReader()
     reader.onload = () => {
       if (typeof reader.result === "string") {
@@ -105,13 +112,28 @@ export default function UserProfileEditPage() {
     reader.readAsDataURL(file)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!user) return
+
+    let finalProfilePhoto = profilePhoto
+
+    // 새 이미지 파일이 있으면 업로드
+    if (profilePhotoFile) {
+      try {
+        const uploadedUrl = await uploadImage(profilePhotoFile)
+        if (uploadedUrl) {
+          finalProfilePhoto = uploadedUrl
+        }
+      } catch (error) {
+        console.error('Failed to upload profile photo:', error)
+      }
+    }
+
     updateUser({
       name: name.trim() || user.name,
       address: address.trim() || undefined,
       phone: phone.trim() || undefined,
-      profilePhoto: profilePhoto || undefined,
+      profilePhoto: finalProfilePhoto || undefined,
     })
     router.push("/settings")
   }

@@ -6,6 +6,7 @@ import { exchangeCodeForTokens } from "@/lib/cognito"
 import { useAuth } from "@/contexts/auth-context"
 import { fetchMyPets } from "@/lib/backend-pets"
 import { saveCats, saveActiveCatId } from "@/lib/storage"
+import { saveOnboardingCompleted } from "@/lib/onboarding"
 
 function parseJwtPayload(idToken: string): { sub?: string; email?: string; name?: string } | null {
   try {
@@ -108,6 +109,8 @@ export default function CallbackPage() {
           // 로컬 스토리지에 저장하여 auth-guard가 인식하도록
           saveCats(pets)
           saveActiveCatId(pets[0].id!)
+          // 펫이 있으면 온보딩 완료 상태로 설정
+          saveOnboardingCompleted(true)
           router.replace("/")
         } else {
           router.replace("/onboarding/cat")

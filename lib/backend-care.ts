@@ -102,3 +102,43 @@ export async function fetchMonthlyCare(
     completedDays: response.completedDays || []
   };
 }
+
+export interface CareLog {
+  id: string;
+  petId: string;
+  date: string;
+  type: string;
+  questions?: any;
+  answers?: Record<string, string>;
+  diagQuestions?: any;
+  diagAnswers?: Record<string, string>;
+  reports?: any;
+  createdAt: string;
+}
+
+/**
+ * 특정 날짜의 케어 로그 조회
+ */
+export async function fetchCareLogByDate(
+  petId: string,
+  date: string
+): Promise<CareLog | null> {
+  const response = await backendFetch<any>(
+    `/care/${petId}/log/${date}`,
+    {
+      method: 'GET',
+    }
+  );
+
+  if (!response) {
+    return null;
+  }
+
+  // Handle wrapped response {success: true, data: {...}}
+  if (response.success && response.data) {
+    return response.data as CareLog;
+  }
+
+  // Handle direct response
+  return response as CareLog;
+}

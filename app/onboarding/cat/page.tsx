@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { catBreeds } from "@/lib/mock"
+import { uploadImage } from "@/lib/backend-uploads"
 import {
   createEmptyMedicalHistory,
   getMedicalHistoryGroupMap,
@@ -44,7 +45,7 @@ const medicalHistoryItemsByGroup = getMedicalHistoryItemsByGroup()
 
 const adoptionPaths = ["보호소/입양기관", "지인/가족", "길에서 구조", "기타"]
 const agencyAdoptionPath = adoptionPaths[0]
-const surveyFrequencyOptions = [2, 3, 4, 5, 6, 7]
+// const surveyFrequencyOptions = [2, 3, 4, 5, 6, 7]
 const weekDays: { value: Weekday; label: string }[] = [
   { value: "mon", label: "월" },
   { value: "tue", label: "화" },
@@ -145,6 +146,7 @@ export default function CatProfilePage() {
   const [showOptional, setShowOptional] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null)
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null)
   const [showValidation, setShowValidation] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -167,8 +169,9 @@ export default function CatProfilePage() {
   const [weight, setWeight] = useState("")
   const [foodType, setFoodType] = useState<"dry" | "wet" | "mixed" | "prescription" | "">("")
   const [waterSource, setWaterSource] = useState<"fountain" | "bowl" | "mixed" | "">("")
-  const [surveyFrequency, setSurveyFrequency] = useState("")
-  const [surveyDays, setSurveyDays] = useState<Weekday[]>([])
+  // surveyFrequency와 surveyDays는 고정값 (매일)
+  const surveyFrequency = "7"
+  const surveyDays: Weekday[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
   // 선택 필드
   const [activityLevel, setActivityLevel] = useState<"low" | "medium" | "high" | "">("")
@@ -189,9 +192,8 @@ export default function CatProfilePage() {
   const showAgencyCodeError = isAgencyAdoption && trimmedAgencyCode.length < 4
 
   const hasAdoptionPath = adoptionPath && (adoptionPath !== "기타" || customAdoptionPath.trim())
-  const surveyFrequencyValue = surveyFrequency ? Number.parseInt(surveyFrequency, 10) : 0
-  const isSurveyScheduleValid =
-    surveyFrequencyValue >= 2 && surveyFrequencyValue <= 7 && surveyDays.length === surveyFrequencyValue
+  const surveyFrequencyValue = 7 // 고정값
+  const isSurveyScheduleValid = true // 항상 유효
   const isValid =
     name.trim() &&
     hasAdoptionPath &&
@@ -201,8 +203,7 @@ export default function CatProfilePage() {
     breed &&
     weight &&
     foodType &&
-    waterSource &&
-    isSurveyScheduleValid
+    waterSource
 
   const selectedGroupIds = medicalHistory.selectedGroupIds
   const selectedItemIds = medicalHistory.selectedItemIds
@@ -263,23 +264,6 @@ export default function CatProfilePage() {
   }, [isAgencyAdoption])
 
   useEffect(() => {
-    if (!surveyFrequencyValue) {
-      setSurveyDays([])
-      return
-    }
-
-    if (surveyFrequencyValue === 7) {
-      setSurveyDays(weekDayOrder)
-      return
-    }
-
-    setSurveyDays((prev) => {
-      const normalized = weekDayOrder.filter((day) => prev.includes(day))
-      return normalized.slice(0, surveyFrequencyValue)
-    })
-  }, [surveyFrequencyValue])
-
-  useEffect(() => {
     if (isNewCatMode || !activeCat) return
 
     const storedAdoptionPath = activeCat.adoptionPath ?? ""
@@ -305,10 +289,11 @@ export default function CatProfilePage() {
     setWeight(activeCat.weight != null ? String(activeCat.weight) : "")
     setFoodType(activeCat.foodType ?? "")
     setWaterSource(activeCat.waterSource ?? "")
-    setSurveyFrequency(
-      activeCat.surveyFrequencyPerWeek != null ? String(activeCat.surveyFrequencyPerWeek) : ""
-    )
-    setSurveyDays(activeCat.surveyDays ?? [])
+    // [주석 처리] surveyFrequency와 surveyDays는 고정값이므로 로드하지 않음
+    // setSurveyFrequency(
+    //   activeCat.surveyFrequencyPerWeek != null ? String(activeCat.surveyFrequencyPerWeek) : ""
+    // )
+    // setSurveyDays(activeCat.surveyDays ?? [])
     setActivityLevel(activeCat.activityLevel ?? "")
     setLivingEnvironment(activeCat.livingEnvironment ?? "")
     setMultiCat(Boolean(activeCat.multiCat))
@@ -329,9 +314,14 @@ export default function CatProfilePage() {
     const file = event.target.files?.[0]
     if (!file) {
       setProfilePhoto(null)
+      setProfilePhotoFile(null)
       return
     }
 
+    // 파일 저장 (나중에 업로드용)
+    setProfilePhotoFile(file)
+
+    // 미리보기용 base64
     const reader = new FileReader()
     reader.onload = () => {
       if (typeof reader.result === "string") {
@@ -341,21 +331,22 @@ export default function CatProfilePage() {
     reader.readAsDataURL(file)
   }
 
-  const toggleSurveyDay = (day: Weekday) => {
-    if (!surveyFrequencyValue || surveyFrequencyValue === 7) return
-
-    setSurveyDays((prev) => {
-      const isSelected = prev.includes(day)
-      if (isSelected) {
-        return prev.filter((item) => item !== day)
-      }
-      if (prev.length >= surveyFrequencyValue) {
-        return prev
-      }
-      const next = [...prev, day]
-      return weekDayOrder.filter((item) => next.includes(item))
-    })
-  }
+  // [주석 처리] 설문 요일 토글 함수 - 현재 매일 고정이므로 사용하지 않음
+  // const toggleSurveyDay = (day: Weekday) => {
+  //   if (!surveyFrequencyValue || surveyFrequencyValue === 7) return
+  //
+  //   setSurveyDays((prev) => {
+  //     const isSelected = prev.includes(day)
+  //     if (isSelected) {
+  //       return prev.filter((item) => item !== day)
+  //     }
+  //     if (prev.length >= surveyFrequencyValue) {
+  //       return prev
+  //     }
+  //     const next = [...prev, day]
+  //     return weekDayOrder.filter((item) => next.includes(item))
+  //   })
+  // }
 
   const toggleMedicalGroup = (groupId: MedicalHistoryGroupId) => {
     setMedicalHistory((prev) => {
@@ -470,6 +461,19 @@ export default function CatProfilePage() {
       notes: notes.trim() || undefined,
       vetInfo: vetInfo.trim() || undefined,
       profilePhoto: profilePhoto || undefined,
+    }
+
+    // 새 이미지 파일이 있으면 업로드
+    if (profilePhotoFile) {
+      try {
+        const uploadedUrl = await uploadImage(profilePhotoFile)
+        if (uploadedUrl) {
+          profile.profilePhoto = uploadedUrl
+        }
+      } catch (error) {
+        console.error('Failed to upload profile photo:', error)
+        // 업로드 실패해도 계속 진행 (기존 base64 사용)
+      }
     }
 
     if (isCreating) {
@@ -778,6 +782,16 @@ export default function CatProfilePage() {
               </div>
 
               {/* 진단 설문 일정 */}
+              {/* 진단 설문 빈도 - 매일 고정 (표시만) */}
+              <div className="space-y-2">
+                <Label>진단 설문 빈도</Label>
+                <div className="px-3 py-2 bg-muted/50 rounded-md text-sm text-muted-foreground">
+                  매일 (월~일)
+                </div>
+                <p className="text-xs text-muted-foreground">진단 설문은 매일 진행됩니다.</p>
+              </div>
+
+              {/* [주석 처리] 설문 빈도 선택 UI - 현재 매일 고정이므로 사용하지 않음
               <div className="space-y-2">
                 <Label>진단 설문 주간 횟수 <span className="text-destructive">*</span></Label>
                 <Select value={surveyFrequency} onValueChange={setSurveyFrequency}>
@@ -833,6 +847,7 @@ export default function CatProfilePage() {
                   </p>
                 )}
               </div>
+              */}
             </CardContent>
           </Card>
 
