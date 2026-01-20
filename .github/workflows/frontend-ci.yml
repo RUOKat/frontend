@@ -11,7 +11,7 @@ permissions:
 env:
   AWS_REGION: ap-northeast-2
   SECRET_ID: dev/ruokat/infra-bundle # Secrets Manager ID
-  ECR_REPOSITORY: ruokat/frontend    # ⚠️ [수정필요] 실제 ECR 리포지토리 이름
+  ECR_REPOSITORY: 132464628555.dkr.ecr.ap-northeast-2.amazonaws.com/ruokat/frontend    # ⚠️ [수정필요] 실제 ECR 리포지토리 이름
 
 jobs:
   build-and-push:
