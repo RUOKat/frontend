@@ -111,7 +111,8 @@ export default function CallbackPage() {
           saveActiveCatId(pets[0].id!)
           // 펫이 있으면 온보딩 완료 상태로 설정
           saveOnboardingCompleted(true)
-          router.replace("/")
+          // 컨텍스트가 새로 초기화되도록 전체 페이지 새로고침
+          window.location.href = "/"
         } else {
           router.replace("/onboarding/cat")
         }

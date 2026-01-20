@@ -30,6 +30,29 @@ export async function fetchQuestions(): Promise<QuestionsData> {
 }
 
 /**
+ * petId별 맞춤 질문 데이터 가져오기 (DynamoDB question_bank 포함)
+ */
+export async function fetchQuestionsForPet(petId: string): Promise<QuestionsData> {
+  const response = await backendFetch<any>(`/care/${petId}/questions`, {
+    method: 'GET',
+  });
+
+  console.log('Fetched questions for pet response:', response);
+
+  if (!response) {
+    throw new Error('Failed to fetch questions for pet');
+  }
+
+  // Handle wrapped response {success: true, data: {...}}
+  if (response.success && response.data) {
+    return response.data as QuestionsData;
+  }
+
+  // Handle direct response
+  return response as QuestionsData;
+}
+
+/**
  * 체크인 기록 저장 (questions + answers)
  */
 export async function submitCheckIn(

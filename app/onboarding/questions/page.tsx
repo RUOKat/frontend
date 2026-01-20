@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { Input } from "@/components/ui/input"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
 import { generateOnboardingQuestions } from "@/lib/questions"
@@ -156,26 +157,52 @@ export default function QuestionsPage() {
               </div>
             </div>
 
-            {/* 선택지 */}
+            {/* 선택지 또는 숫자 입력 */}
             <div className="space-y-2">
-              {currentQuestion.options.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => handleAnswer(option.value)}
-                  className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
-                    answers[currentQuestion.id] === option.value
-                      ? "border-primary bg-primary/5"
-                      : "border-border bg-card hover:border-primary/50"
-                  }`}
-                >
-                  <span
-                    className={`font-medium ${answers[currentQuestion.id] === option.value ? "text-primary" : "text-foreground"}`}
+              {currentQuestion.type === "number" ? (
+                // 숫자 입력 (체중)
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      step={currentQuestion.validation?.step || 0.01}
+                      min={currentQuestion.validation?.min || 0}
+                      max={currentQuestion.validation?.max || 100}
+                      value={answers[currentQuestion.id] || ""}
+                      onChange={(e) => handleAnswer(e.target.value)}
+                      placeholder="예: 4.25"
+                      className="text-lg h-14 text-center"
+                    />
+                    <span className="text-lg font-medium text-muted-foreground">kg</span>
+                  </div>
+                  {activeCat?.weight && (
+                    <p className="text-sm text-muted-foreground text-center">
+                      등록된 체중: {activeCat.weight}kg
+                    </p>
+                  )}
+                </div>
+              ) : (
+                // 선택형 질문
+                currentQuestion.options.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleAnswer(option.value)}
+                    className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                      answers[currentQuestion.id] === option.value
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-card hover:border-primary/50"
+                    }`}
                   >
-                    {option.label}
-                  </span>
-                </button>
-              ))}
+                    <span
+                      className={`font-medium ${answers[currentQuestion.id] === option.value ? "text-primary" : "text-foreground"}`}
+                    >
+                      {option.label}
+                    </span>
+                  </button>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

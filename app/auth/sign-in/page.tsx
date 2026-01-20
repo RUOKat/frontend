@@ -10,6 +10,9 @@ import { Label } from "@/components/ui/label"
 import { useAuth } from "@/contexts/auth-context"
 import { getCognitoLoginUrl, isCognitoConfigured } from "@/lib/cognito"
 import { useWebViewAuth } from "@/hooks/useWebViewAuth"
+import { fetchMyPets } from "@/lib/backend-pets"
+import { saveCats, saveActiveCatId } from "@/lib/storage"
+import { saveOnboardingCompleted } from "@/lib/onboarding"
 import { Cat, Chrome, Mail, Shield, Zap } from "lucide-react"
 
 type LoginResponse = {
@@ -119,7 +122,24 @@ export default function SignInPage() {
         }
       } catch {}
 
-      router.replace("/onboarding/cat")
+      // 백엔드에서 펫 목록 확인 후 분기
+      try {
+        const pets = await fetchMyPets()
+        console.log("펫 목록 조회 결과:", pets.length)
+        if (pets.length > 0) {
+          // 로컬 스토리지에 저장
+          saveCats(pets)
+          saveActiveCatId(pets[0].id!)
+          saveOnboardingCompleted(true)
+          // 컨텍스트가 새로 초기화되도록 전체 페이지 새로고침
+          window.location.href = "/"
+        } else {
+          router.replace("/onboarding/cat")
+        }
+      } catch (e) {
+        console.error("펫 목록 조회 실패:", e)
+        router.replace("/onboarding/cat")
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "로그인에 실패했어요."
       setError(message)

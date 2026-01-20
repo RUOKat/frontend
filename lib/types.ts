@@ -70,9 +70,14 @@ export interface Question {
   id: string
   text: string
   description: string
-  type: "single" | "scale" | "yesno"
+  type: "single" | "scale" | "yesno" | "number"
   options: QuestionOption[]
-  category?: "FLUTD" | "CKD" | "GI" | "PAIN"
+  category?: "FLUTD" | "CKD" | "GI" | "PAIN" | "DAILY"
+  validation?: {
+    min?: number
+    max?: number
+    step?: number
+  }
 }
 
 export interface QuestionOption {

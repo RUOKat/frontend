@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Cat, Home, User, type LucideIcon } from "lucide-react"
-import { useOnboarding } from "@/contexts/onboarding-context"
+import { useActiveCat } from "@/contexts/active-cat-context"
 import { useHaptic } from "@/hooks/useHaptic"
 
 interface AppShellProps {
@@ -27,14 +27,17 @@ const navItems: NavItem[] = [
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname()
-  const { onboardingCompleted, isLoading } = useOnboarding()
+  const { cats, isLoading } = useActiveCat()
   const { light } = useHaptic()
 
   // Hide shell on auth/onboarding pages
   const isAuthOrOnboarding = pathname.startsWith("/auth") || pathname.startsWith("/onboarding")
 
-  // Render without shell until onboarding is complete
-  if (isLoading || !onboardingCompleted || isAuthOrOnboarding) {
+  // 펫이 있으면 하단 메뉴 표시 (onboardingCompleted 체크 제거)
+  const hasCats = cats.length > 0
+
+  // Render without shell until cats are loaded or on auth/onboarding pages
+  if (isLoading || !hasCats || isAuthOrOnboarding) {
     return <>{children}</>
   }
 
