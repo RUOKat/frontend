@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer } from "@/components/ui/chart"
 import { RiskCard } from "@/components/app/risk-card"
@@ -9,8 +9,9 @@ import { StatusBadge } from "@/components/app/status-badge"
 import { CatSelector } from "@/components/app/cat-selector"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
-import { getMockOkatSummary, getMockWeeklyReports, type OkatMetric, type OkatSummary, type WeeklyReport } from "@/lib/okat-data"
-import { Camera, ChevronRight, ClipboardList } from "lucide-react"
+import { getMockWeeklyReports, type OkatSummary, type WeeklyReport } from "@/lib/okat-data"
+import { fetchMonthlyStats, type MonthlyStats } from "@/lib/backend-care"
+import { Camera, ChevronRight, ClipboardList, Loader2 } from "lucide-react"
 import { CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from "recharts"
 
 function formatDateTime(value?: string | null) {
@@ -25,34 +26,99 @@ type MetricPoint = {
   value: number
 }
 
-function seedFromText(value: string): number {
-  return value.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
-}
-
-function buildMetricSeries(metric: OkatMetric, days: number, seed: number, withVariation: boolean): MetricPoint[] {
-  const totalDays = Math.max(2, days || 7)
-  const baseValue = 100
-  return Array.from({ length: totalDays }, (_, index) => {
-    const progress = totalDays === 1 ? 1 : index / (totalDays - 1)
-    const wobble = withVariation ? Math.sin((seed + index) * 1.4) * 2.5 : 0
-    const value = baseValue + metric.changePercent * progress + wobble
-    return { day: index + 1, value: Math.round(value * 10) / 10 }
-  })
-}
-
 export default function OkatDashboardPage() {
   const { activeCat, activeCatId } = useActiveCat()
   const { riskStatus } = useOnboarding()
   const [summary, setSummary] = useState<OkatSummary | null>(null)
   const [weeklyReports, setWeeklyReports] = useState<WeeklyReport[]>([])
+  const [monthlyStats, setMonthlyStats] = useState<MonthlyStats | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
-  const summaryKey = useMemo(() => ["okatSummary", activeCatId], [activeCatId])
   const weeklyReportsKey = useMemo(() => ["weeklyReports", activeCatId], [activeCatId])
 
+  // 월간 통계 로드
+  const loadMonthlyStats = useCallback(async () => {
+    if (!activeCatId) return
+    
+    setIsLoading(true)
+    try {
+      const now = new Date()
+      const year = now.getFullYear()
+      const month = now.getMonth() + 1
+      
+      const stats = await fetchMonthlyStats(activeCatId, year, month)
+      setMonthlyStats(stats)
+      
+      // 통계 기반으로 summary 생성
+      if (stats && stats.totalDays > 0) {
+        const totalRecords = stats.totalDays
+        const normalCount = stats.food.normal + stats.water.normal + stats.stool.normal + stats.urine.normal
+        const totalCount = (stats.food.normal + stats.food.less + stats.food.more + stats.food.none) +
+                          (stats.water.normal + stats.water.less + stats.water.more + stats.water.none) +
+                          (stats.stool.normal + stats.stool.less + stats.stool.more + stats.stool.none + stats.stool.diarrhea) +
+                          (stats.urine.normal + stats.urine.less + stats.urine.more + stats.urine.none)
+        
+        const normalRatio = totalCount > 0 ? normalCount / totalCount : 0
+        const status = normalRatio >= 0.7 ? 'normal' : normalRatio >= 0.5 ? 'caution' : 'check'
+        
+        // 인사이트 생성
+        const insights: string[] = []
+        if (stats.food.less > stats.food.normal) insights.push("식사량이 평소보다 적은 날이 많았어요.")
+        if (stats.water.less > stats.water.normal) insights.push("음수량이 평소보다 적은 날이 많았어요.")
+        if (stats.stool.diarrhea > 0) insights.push(`설사가 ${stats.stool.diarrhea}회 있었어요.`)
+        if (stats.weightChange !== null) {
+          if (stats.weightChange > 0.2) insights.push(`체중이 ${stats.weightChange.toFixed(2)}kg 증가했어요.`)
+          else if (stats.weightChange < -0.2) insights.push(`체중이 ${Math.abs(stats.weightChange).toFixed(2)}kg 감소했어요.`)
+        }
+        if (insights.length === 0) insights.push("전반적으로 안정적인 상태를 유지하고 있어요.")
+        
+        setSummary({
+          status,
+          coverage: { daysWithData: totalRecords, totalDays: now.getDate() },
+          updatedAt: new Date().toISOString(),
+          metrics: [
+            { 
+              id: "food", 
+              label: "식사량", 
+              changePercent: Math.round((stats.food.normal / Math.max(1, totalRecords)) * 100 - 50),
+              trendLabel: `정상 ${stats.food.normal}일 / 적음 ${stats.food.less}일`
+            },
+            { 
+              id: "water", 
+              label: "음수량", 
+              changePercent: Math.round((stats.water.normal / Math.max(1, totalRecords)) * 100 - 50),
+              trendLabel: `정상 ${stats.water.normal}일 / 적음 ${stats.water.less}일`
+            },
+            { 
+              id: "stool", 
+              label: "배변", 
+              changePercent: Math.round((stats.stool.normal / Math.max(1, totalRecords)) * 100 - 50),
+              trendLabel: `정상 ${stats.stool.normal}일 / 설사 ${stats.stool.diarrhea}일`
+            },
+            { 
+              id: "weight", 
+              label: "체중", 
+              changePercent: stats.weightChange ? Math.round(stats.weightChange * 10) : 0,
+              trendLabel: stats.latestWeight ? `최근 ${stats.latestWeight}kg` : "기록 없음"
+            },
+          ],
+          insights,
+        })
+      } else {
+        setSummary(null)
+      }
+    } catch (error) {
+      console.error('Failed to load monthly stats:', error)
+      setSummary(null)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [activeCatId])
+
   useEffect(() => {
-    setSummary(getMockOkatSummary(activeCatId))
+    loadMonthlyStats()
     setWeeklyReports(getMockWeeklyReports(activeCatId))
-  }, [summaryKey, weeklyReportsKey, activeCatId])
+  }, [weeklyReportsKey, activeCatId, loadMonthlyStats])
 
   const coverageLabel = summary
     ? `최근 ${summary.coverage.totalDays}일 중 ${summary.coverage.daysWithData}일 기록`
@@ -63,19 +129,36 @@ export default function OkatDashboardPage() {
   const displayMetrics = summary?.metrics?.length
     ? summary.metrics
     : [
-        { id: "appetite", label: "식욕", changePercent: 0, trendLabel: fallbackMetricTrendLabel },
-        { id: "water", label: "음수", changePercent: 0, trendLabel: fallbackMetricTrendLabel },
-        { id: "litter", label: "배변", changePercent: 0, trendLabel: fallbackMetricTrendLabel },
-        { id: "activity", label: "활동량", changePercent: 0, trendLabel: fallbackMetricTrendLabel },
+        { id: "food", label: "식사량", changePercent: 0, trendLabel: fallbackMetricTrendLabel },
+        { id: "water", label: "음수량", changePercent: 0, trendLabel: fallbackMetricTrendLabel },
+        { id: "stool", label: "배변", changePercent: 0, trendLabel: fallbackMetricTrendLabel },
+        { id: "weight", label: "체중", changePercent: 0, trendLabel: fallbackMetricTrendLabel },
       ]
-  const chartDays = summary?.coverage?.totalDays ?? 7
-  const hasMetricData = Boolean(summary?.metrics?.length)
   const chartColors = ["var(--color-chart-1)", "var(--color-chart-2)", "var(--color-chart-3)", "var(--color-chart-4)"]
+  
+  // 실제 일별 데이터로 차트 데이터 생성
   const metricsWithChart = displayMetrics.map((metric, index) => {
-    const seed = seedFromText(`${activeCatId ?? "cat"}-${metric.id}`)
+    let chartData: MetricPoint[] = []
+    
+    if (monthlyStats?.dailyData && monthlyStats.dailyData.length > 0) {
+      // 실제 데이터 사용
+      chartData = monthlyStats.dailyData.map((d) => {
+        let value = 50 // 기본값
+        if (metric.id === 'food') value = d.food
+        else if (metric.id === 'water') value = d.water
+        else if (metric.id === 'stool') value = d.stool
+        else if (metric.id === 'urine') value = d.urine
+        else if (metric.id === 'weight' && d.weight !== null) value = d.weight * 10 // 체중은 스케일 조정
+        return { day: d.day, value }
+      })
+    } else {
+      // 데이터 없으면 빈 차트
+      chartData = [{ day: 1, value: 50 }]
+    }
+    
     return {
       ...metric,
-      chartData: buildMetricSeries(metric, chartDays, seed, hasMetricData),
+      chartData,
       color: chartColors[index % chartColors.length],
     }
   })
@@ -137,6 +220,11 @@ export default function OkatDashboardPage() {
             <CardTitle className="text-base font-semibold">핵심 지표</CardTitle>
           </CardHeader>
           <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : (
             <div className="grid grid-cols-2 gap-3">
               {metricsWithChart.map((metric) => {
                 const chartConfig = {
@@ -184,6 +272,7 @@ export default function OkatDashboardPage() {
                 )
               })}
             </div>
+            )}
           </CardContent>
         </Card>
 

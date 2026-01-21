@@ -205,3 +205,51 @@ export async function fetchDiagQuestions(petId: string): Promise<DiagQuestion[]>
 
   return [];
 }
+
+export interface MonthlyStats {
+  totalDays: number;
+  food: { normal: number; less: number; more: number; none: number };
+  water: { normal: number; less: number; more: number; none: number };
+  stool: { normal: number; less: number; more: number; none: number; diarrhea: number };
+  urine: { normal: number; less: number; more: number; none: number };
+  latestWeight: number | null;
+  weightChange: number | null;
+  avgWeight: number | null;
+  dailyData: {
+    date: string;
+    day: number;
+    food: number;
+    water: number;
+    stool: number;
+    urine: number;
+    weight: number | null;
+  }[];
+}
+
+/**
+ * 월간 케어 통계 조회 (핵심 지표)
+ */
+export async function fetchMonthlyStats(
+  petId: string,
+  year: number,
+  month: number
+): Promise<MonthlyStats | null> {
+  const response = await backendFetch<any>(
+    `/care/${petId}/monthly-stats?year=${year}&month=${month}`,
+    {
+      method: 'GET',
+    }
+  );
+
+  if (!response) {
+    return null;
+  }
+
+  // Handle wrapped response {success: true, data: {...}}
+  if (response.success && response.data) {
+    return response.data as MonthlyStats;
+  }
+
+  // Handle direct response
+  return response as MonthlyStats;
+}
