@@ -109,7 +109,7 @@ export default function FollowUpPage() {
           <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
             <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
             <p className="text-sm text-amber-800">
-              <span className="font-medium">{categoryName}</span> 관련 신호가 보여서 확인 질문 3개만 더 물어볼게요.
+              <span className="font-medium">{categoryName}</span> 관련 신호가 보여서 확인 질문을 더 물어볼게요.
               <br />
               <span className="text-xs opacity-80">(판단이 아니라 참고용이에요)</span>
             </p>
