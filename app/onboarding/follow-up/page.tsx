@@ -62,7 +62,7 @@ export default function FollowUpPage() {
   }
 
   const handleComplete = async () => {
-    if (!activeCat || !onboardingAnswers || !activeCatId) return
+    if (!activeCatId) return
 
     setIsSubmitting(true)
     
@@ -73,19 +73,20 @@ export default function FollowUpPage() {
       // 2. 백엔드에 진단 기록 저장 (diagQuestions + diagAnswers)
       await submitDiag(activeCatId, questions, answers)
 
-      // 3. 위험도 계산
-      const risk = computeRiskStatus(activeCat, onboardingAnswers, followUpPlan, answers)
-      setRiskStatus(risk)
+      // 3. 위험도 계산 (DIAG 카테고리는 스킵)
+      if (activeCat && onboardingAnswers && followUpPlan.category !== 'DIAG') {
+        const risk = computeRiskStatus(activeCat, onboardingAnswers, followUpPlan, answers)
+        setRiskStatus(risk)
+      }
 
       // 4. 홈으로
       router.push("/")
     } catch (error) {
       console.error('Failed to submit diagnosis:', error)
-      setIsSubmitting(false)
       // Still allow navigation even if API fails
-      const risk = computeRiskStatus(activeCat, onboardingAnswers, followUpPlan, answers)
-      setRiskStatus(risk)
       router.push("/")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
