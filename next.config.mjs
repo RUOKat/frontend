@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone', ## 최승우가 테스트용으로 추가
+  output: 'standalone', 
   typescript: {
     ignoreBuildErrors: true,
   },
