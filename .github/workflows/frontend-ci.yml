@@ -3,7 +3,7 @@ name: Frontend CI (Build & Push)
 on:
   push:
     branches: [ "main" ]  # 프론트엔드 배포 브랜치
-   workflow_dispatch:
+  workflow_dispatch:
 
 permissions:
   id-token: write  # AWS OIDC 필수
