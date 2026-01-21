@@ -253,3 +253,41 @@ export async function fetchMonthlyStats(
   // Handle direct response
   return response as MonthlyStats;
 }
+
+export interface DailyReport {
+  id: string;
+  date: string;
+  dateLabel: string;
+  status: 'normal' | 'caution' | 'check';
+  summary: string;
+  fullReport: string;
+  createdAt: string;
+}
+
+/**
+ * 일일 리포트 조회 (DynamoDB DiagnosticTable final_report)
+ */
+export async function fetchDailyReports(petId: string): Promise<DailyReport[]> {
+  const response = await backendFetch<any>(
+    `/care/${petId}/daily-reports`,
+    {
+      method: 'GET',
+    }
+  );
+
+  if (!response) {
+    return [];
+  }
+
+  // Handle wrapped response {success: true, data: [...]}
+  if (response.success && response.data) {
+    return response.data as DailyReport[];
+  }
+
+  // Handle direct response (array)
+  if (Array.isArray(response)) {
+    return response as DailyReport[];
+  }
+
+  return [];
+}
