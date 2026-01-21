@@ -165,3 +165,43 @@ export async function fetchCareLogByDate(
   // Handle direct response
   return response as CareLog;
 }
+
+export interface DiagQuestion {
+  id: string;
+  text: string;
+  type: string;
+  options: {
+    label: string;
+    value: string;
+    relatedSymptom: string;
+    signal: string;
+  }[];
+}
+
+/**
+ * 진단 질문 가져오기 (DynamoDB DiagnosticTable에서)
+ */
+export async function fetchDiagQuestions(petId: string): Promise<DiagQuestion[]> {
+  const response = await backendFetch<any>(
+    `/care/${petId}/diag-questions`,
+    {
+      method: 'GET',
+    }
+  );
+
+  if (!response) {
+    return [];
+  }
+
+  // Handle wrapped response {success: true, data: [...]}
+  if (response.success && response.data) {
+    return response.data as DiagQuestion[];
+  }
+
+  // Handle direct response (array)
+  if (Array.isArray(response)) {
+    return response as DiagQuestion[];
+  }
+
+  return [];
+}

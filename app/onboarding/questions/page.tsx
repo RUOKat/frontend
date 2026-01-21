@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
 import { generateOnboardingQuestions } from "@/lib/questions"
-import { evaluateSuspicion } from "@/lib/triage"
-import { computeRiskStatus } from "@/lib/risk"
+// import { evaluateSuspicion } from "@/lib/triage"  // 비활성화
+// import { computeRiskStatus } from "@/lib/risk"  // 비활성화
 import { getTodayISO, updateMonthlyCare } from "@/lib/care-monthly"
 import type { Question, OnboardingAnswers } from "@/lib/types"
 import { MessageCircle, ArrowRight, ArrowLeft, HelpCircle } from "lucide-react"
@@ -19,7 +19,8 @@ import { submitCheckIn } from "@/lib/backend-care"
 export default function QuestionsPage() {
   const router = useRouter()
   const { activeCat, activeCatId } = useActiveCat()
-  const { setOnboardingAnswers, setFollowUpPlan, setRiskStatus } = useOnboarding()
+  const { setOnboardingAnswers } = useOnboarding()
+  // const { setFollowUpPlan, setRiskStatus } = useOnboarding()  // 비활성화
 
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -75,9 +76,14 @@ export default function QuestionsPage() {
       // 2. 백엔드에 체크인 기록 저장 (questions + answers)
       await submitCheckIn(activeCatId, questions, answers)
 
-      // 3. 의심 평가
-      const followUp = await evaluateSuspicion(activeCat, answers)
+      // 3. 월간 케어 기록 업데이트
       updateMonthlyCare(getTodayISO(), activeCatId ?? undefined)
+
+      // 4. 홈으로 이동 (evaluateSuspicion 비활성화)
+      router.push("/")
+
+      /* evaluateSuspicion 로직 비활성화
+      const followUp = await evaluateSuspicion(activeCat, answers)
 
       if (followUp) {
         // 의심 징후가 있으면 follow-up 필요
@@ -89,21 +95,13 @@ export default function QuestionsPage() {
         setRiskStatus(risk)
         router.push("/")
       }
+      */
     } catch (error) {
       console.error('Failed to submit check-in:', error)
       setIsSubmitting(false)
-      // Still allow navigation even if API fails
-      const followUp = await evaluateSuspicion(activeCat, answers)
+      // API 실패해도 홈으로 이동
       updateMonthlyCare(getTodayISO(), activeCatId ?? undefined)
-
-      if (followUp) {
-        setFollowUpPlan(followUp)
-        router.push("/onboarding/follow-up")
-      } else {
-        const risk = computeRiskStatus(activeCat, answers, null, null)
-        setRiskStatus(risk)
-        router.push("/")
-      }
+      router.push("/")
     }
   }
 

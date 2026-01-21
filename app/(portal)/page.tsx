@@ -1,6 +1,7 @@
 "use client"
 
-import Link from "next/link"
+// import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,11 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { CheckinPopup } from "@/components/app/checkin-popup"
 import { CatSelector } from "@/components/app/cat-selector"
 import { useActiveCat } from "@/contexts/active-cat-context"
-import { fetchMonthlyCare, fetchCareLogByDate, type CareLog } from "@/lib/backend-care"
+import { fetchMonthlyCare, fetchCareLogByDate, fetchDiagQuestions, type CareLog } from "@/lib/backend-care"
 import { Calendar, Gift, MessageCircle, ExternalLink, Bell, Trash2, Loader2 } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
 import { fetchNotifications, markNotificationAsRead, deleteNotification, type Notification } from "@/lib/backend-notifications"
 import { getTokens } from "@/lib/backend"
+import { useOnboarding } from "@/contexts/onboarding-context"
 
 type MonthlyCareRecord = {
   completedDays: string[]
@@ -39,7 +41,9 @@ const getStampIndex = (value: string) => {
 }
 
 export default function HomePage() {
+  const router = useRouter()
   const { activeCat, activeCatId } = useActiveCat()
+  const { setFollowUpPlan } = useOnboarding()
   const [monthlyCare, setMonthlyCare] = useState<MonthlyCareRecord>({
     completedDays: [],
     streak: 0,
@@ -56,6 +60,13 @@ export default function HomePage() {
   const [selectedCareLog, setSelectedCareLog] = useState<CareLog | null>(null)
   const [isLoadingCareLog, setIsLoadingCareLog] = useState(false)
   const [selectedDate, setSelectedDate] = useState("")
+  
+  // 오늘의 케어 로그 (진단설문 버튼 표시 여부 판단용)
+  const [todayCareLog, setTodayCareLog] = useState<CareLog | null>(null)
+  
+  // 진단설문 버튼 클릭 관련 상태
+  const [isCheckingDiag, setIsCheckingDiag] = useState(false)
+  const [noDiagQuestionsOpen, setNoDiagQuestionsOpen] = useState(false)
 
   // 월간 케어 기록 로드
   const loadMonthlyCare = useCallback(async () => {
@@ -72,6 +83,20 @@ export default function HomePage() {
         streak: 0,
         completionRate: data.completedDays.length / now.getDate(),
       })
+      
+      // 오늘의 케어 로그 로드 (진단설문 버튼 표시 여부 판단용)
+      const todayISO = `${year}-${String(month).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
+      if (data.completedDays.includes(todayISO)) {
+        try {
+          const careLog = await fetchCareLogByDate(activeCatId, todayISO)
+          setTodayCareLog(careLog)
+        } catch (error) {
+          console.error('Failed to load today care log:', error)
+          setTodayCareLog(null)
+        }
+      } else {
+        setTodayCareLog(null)
+      }
     } catch (error) {
       console.error('Failed to load monthly care:', error)
       setMonthlyCare({
@@ -79,6 +104,7 @@ export default function HomePage() {
         streak: 0,
         completionRate: 0,
       })
+      setTodayCareLog(null)
     }
   }, [activeCatId])
 
@@ -273,6 +299,54 @@ export default function HomePage() {
     }
   }
 
+  // 오늘 checkIn 기록(answers)이 있는지 확인
+  const hasCheckInAnswers = todayCareLog?.answers && Object.keys(todayCareLog.answers).length > 0
+
+  // 진단설문 버튼 클릭 핸들러
+  const handleDiagSurveyClick = async () => {
+    if (!activeCatId) return
+    
+    if (hasCheckInAnswers) {
+      // checkIn 기록이 있으면 diag-questions API 호출
+      setIsCheckingDiag(true)
+      try {
+        const diagQuestions = await fetchDiagQuestions(activeCatId)
+        
+        if (diagQuestions.length === 0) {
+          // 질문이 없으면 팝업 표시
+          setNoDiagQuestionsOpen(true)
+        } else {
+          // 질문이 있으면 follow-up 페이지로 이동
+          // followUpPlan에 질문 설정
+          setFollowUpPlan({
+            category: 'DIAG',
+            questions: diagQuestions.map(q => ({
+              id: q.id,
+              text: q.text,
+              description: '진단 질문입니다.',
+              type: q.type as 'single' | 'yesno' | 'number',
+              options: q.options.map(opt => ({
+                value: opt.value,
+                label: opt.label,
+                score: opt.signal === 'ABNORMAL' ? 1 : 0,
+              })),
+              category: 'DIAG',
+            })),
+          })
+          router.push('/onboarding/follow-up')
+        }
+      } catch (error) {
+        console.error('Failed to fetch diag questions:', error)
+        setNoDiagQuestionsOpen(true)
+      } finally {
+        setIsCheckingDiag(false)
+      }
+    } else {
+      // checkIn 기록이 없으면 questions 페이지로 이동
+      router.push('/onboarding/questions')
+    }
+  }
+
   const formatNotificationTime = (createdAt: string) => {
     const date = new Date(createdAt)
     const now = new Date()
@@ -339,10 +413,14 @@ export default function HomePage() {
     ? Math.round((completedSurveyDays / Math.max(1, targetDays)) * 100)
     : Math.round(monthlyCare.completionRate * 100)
   const todayISO = formatISODate(year, monthIndex, now.getDate())
-  // 스케줄이 있으면 스케줄된 날에만, 없으면 오늘 기록이 없으면 버튼 표시
+  // 진단설문 버튼 표시 조건:
+  // 1. 오늘 기록이 없으면 표시
+  // 2. 오늘 기록이 있어도 diagAnswers가 비어있으면 표시
+  const hasTodayRecord = monthlyCare.completedDays.includes(todayISO)
+  const hasDiagAnswers = todayCareLog?.diagAnswers && Object.keys(todayCareLog.diagAnswers).length > 0
   const needsSurveyToday = hasSchedule 
-    ? scheduledDaySet.has(now.getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6) && !monthlyCare.completedDays.includes(todayISO)
-    : !monthlyCare.completedDays.includes(todayISO)
+    ? scheduledDaySet.has(now.getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6) && (!hasTodayRecord || !hasDiagAnswers)
+    : !hasTodayRecord || !hasDiagAnswers
   const firstDayIndex = new Date(year, monthIndex, 1).getDay()
   const totalCells = Math.ceil((firstDayIndex + daysInMonth) / 7) * 7
   const completedSet = new Set(monthlyCare.completedDays)
@@ -522,21 +600,39 @@ export default function HomePage() {
 
       {needsSurveyToday && (
         <Button
-          asChild
+          onClick={handleDiagSurveyClick}
+          disabled={isCheckingDiag}
           className="fixed bottom-24 right-4 z-40 h-12 rounded-full px-5 shadow-lg cta-nudge"
-          aria-label="진단 설문"
+          aria-label={hasCheckInAnswers ? "진단 설문" : "데일리 설문"}
         >
-          <Link href="/onboarding/questions">
-            <span className="relative inline-flex items-center">
+          <span className="relative inline-flex items-center">
+            {isCheckingDiag ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
               <MessageCircle className="w-4 h-4 mr-2" />
-              진단 설문
-              <span className="cta-badge" aria-hidden="true">
-                !
-              </span>
+            )}
+            {hasCheckInAnswers ? "진단 설문" : "데일리 설문"}
+            <span className="cta-badge" aria-hidden="true">
+              !
             </span>
-          </Link>
+          </span>
         </Button>
       )}
+
+      {/* 진단 질문 없음 팝업 */}
+      <Dialog open={noDiagQuestionsOpen} onOpenChange={setNoDiagQuestionsOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>아직 질문이 없어요</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            아직 진단 질문이 준비되지 않았어요. 잠시 후 다시 시도해주세요.
+          </p>
+          <Button onClick={() => setNoDiagQuestionsOpen(false)} className="w-full mt-2">
+            확인
+          </Button>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={tipOpen} onOpenChange={setTipOpen}>
         <DialogContent className="sm:max-w-lg">

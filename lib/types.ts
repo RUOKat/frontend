@@ -72,7 +72,7 @@ export interface Question {
   description: string
   type: "single" | "scale" | "yesno" | "number"
   options: QuestionOption[]
-  category?: "FLUTD" | "CKD" | "GI" | "PAIN" | "DAILY"
+  category?: "FLUTD" | "CKD" | "GI" | "PAIN" | "DAILY" | "DIAG"
   validation?: {
     min?: number
     max?: number
@@ -93,9 +93,9 @@ export interface OnboardingAnswers {
 
 // Follow-up 계획 타입
 export interface FollowUpPlan {
-  category: "FLUTD" | "CKD" | "GI" | "PAIN"
-  score: number
-  reasonSummary: string
+  category: "FLUTD" | "CKD" | "GI" | "PAIN" | "DIAG"
+  score?: number
+  reasonSummary?: string
   questions: Question[]
 }
 

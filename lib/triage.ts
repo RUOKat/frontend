@@ -145,12 +145,13 @@ export async function evaluateSuspicion(catProfile: CatProfile, onboardingAnswer
 }
 
 // 범주별 한글 이름
-export function getCategoryName(category: "FLUTD" | "CKD" | "GI" | "PAIN"): string {
-  const names = {
+export function getCategoryName(category: "FLUTD" | "CKD" | "GI" | "PAIN" | "DIAG"): string {
+  const names: Record<string, string> = {
     FLUTD: "요로 건강",
     CKD: "신장 건강",
     GI: "소화기 건강",
     PAIN: "활동성/통증",
+    DIAG: "맞춤 진단",
   }
-  return names[category]
+  return names[category] || "건강 체크"
 }
