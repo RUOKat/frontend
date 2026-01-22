@@ -4,14 +4,31 @@ pipeline {
     triggers {
         GenericTrigger(
             genericVariables: [
-                [key: 'ref', value: '$.ref']
+                // [수정] 기존 'ref' 대신 'workflow_run' 내부의 브랜치명을 가져오도록 변경
+                // (이유: Push 이벤트가 아닌 Workflow Run 이벤트는 구조가 다릅니다.)
+                [key: 'BRANCH', value: '$.workflow_run.head_branch'],
+
+                // [추가] 상태 확인 변수 (시작됨/진행중/완료됨)
+                [key: 'STATUS', value: '$.action'],
+
+                // [추가] 결과 확인 변수 (성공/실패)
+                [key: 'RESULT', value: '$.workflow_run.conclusion']
             ],
-            causeString: 'Triggered by GitHub Push',
-            token: 'frontend-deploy-token',
+            
+            // [수정] 트리거 원인 설명 변경
+            causeString: 'Triggered by GitHub Actions Completion (Frontend)',
+            
+            token: 'frontend-deploy-token', // (기존 유지)
+            
             printContributedVariables: true,
             printPostContent: true,
-            regexpFilterText: '$ref',
-            regexpFilterExpression: 'refs/heads/main'
+            
+            // [수정] 필터링 대상 변수 변경 ($ref -> $BRANCH $STATUS $RESULT)
+            regexpFilterText: '$BRANCH $STATUS $RESULT',
+            
+            // [수정] 필터링 조건 변경
+            // 해석: 브랜치는 'main' + 상태는 'completed(완료)' + 결과는 'success(성공)' 일 때만 실행
+            regexpFilterExpression: 'main completed success'
         )
     }
     
@@ -31,7 +48,8 @@ pipeline {
                 script {
                     echo "🚀 Deploying ${ECS_SERVICE} to ${ECS_CLUSTER}..."
                     
-                    // ECS 서비스 강제 재배포
+                    // ECS 서비스 강제 재배포 (기존 유지)
+                    // --force-new-deployment 덕분에 새 이미지를 무조건 당겨옵니다.
                     sh """
                         aws ecs update-service \
                             --cluster ${ECS_CLUSTER} \
