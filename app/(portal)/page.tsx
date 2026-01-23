@@ -644,12 +644,19 @@ export default function HomePage() {
                   key={notification.id}
                   onClick={() => handleNotificationClick(notification.id)}
                   className={`w-full rounded-lg border px-3 py-2 text-left transition cursor-pointer ${
-                    notification.isRead ? "border-border bg-background" : "border-primary/30 bg-primary/5"
+                    notification.isRead ? "border-border bg-background opacity-60" : "border-primary/30 bg-primary/5"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0 space-y-1">
-                      <p className="text-sm font-medium text-foreground">{notification.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className={`text-sm font-medium ${notification.isRead ? "text-muted-foreground" : "text-foreground"}`}>
+                          {notification.title}
+                        </p>
+                        {notification.isRead && (
+                          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">읽음</span>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">{notification.body}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
