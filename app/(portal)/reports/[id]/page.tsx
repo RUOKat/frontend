@@ -175,22 +175,23 @@ export default function ReportDetailPage() {
                     <p className="text-sm text-foreground/80 mb-3 leading-relaxed">{children}</p>
                   ),
                   ul: ({ children }) => (
-                    <ul className="list-none text-sm mb-3 space-y-2 pl-1">{children}</ul>
+                    <ul className="list-none text-sm mb-3 space-y-2 pl-1">
+                      {children}
+                    </ul>
                   ),
                   ol: ({ children }) => (
-                    <ol className="list-decimal list-inside text-sm mb-3 space-y-2">{children}</ol>
+                    <ol className="list-decimal text-sm mb-3 space-y-2 pl-5 marker:text-foreground">
+                      {children}
+                    </ol>
                   ),
                   li: ({ children }) => (
-                    <li className="text-sm text-foreground/80 flex items-start gap-2">
-                      <span className="text-primary mt-1.5">•</span>
-                      <span>{children}</span>
-                    </li>
+                    <li className="text-sm text-foreground/80 pl-1">{children}</li>
                   ),
                   strong: ({ children }) => (
                     <strong className="font-bold text-amber-600 dark:text-amber-400">{children}</strong>
                   ),
                   em: ({ children }) => (
-                    <em className="italic text-primary/80 not-italic font-medium">{children}</em>
+                    <em className="not-italic font-semibold text-rose-400 dark:text-rose-400">{children}</em>
                   ),
                   blockquote: ({ children }) => (
                     <blockquote className="border-l-4 border-amber-400 bg-amber-50 dark:bg-amber-950/30 pl-4 pr-3 py-2 my-3 rounded-r-lg">
