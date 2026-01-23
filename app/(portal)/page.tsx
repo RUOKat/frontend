@@ -432,6 +432,7 @@ export default function HomePage() {
 
     const dateISO = formatISODate(year, monthIndex, dayNumber)
     const isCompleted = completedSet.has(dateISO)
+    const isToday = dateISO === todayISO
     // 스케줄이 있으면 surveyCompletedDays 확인, 없으면 completedSet 확인
     const hasSurveyStamp = hasSchedule ? surveyCompletedDays.has(dayNumber) : isCompleted
     const stampSrc = hasSurveyStamp ? stampImages[getStampIndex(dateISO)] : null
@@ -448,21 +449,21 @@ export default function HomePage() {
           isCompleted 
             ? "border-primary/30 bg-primary/10 text-primary cursor-pointer hover:bg-primary/20" 
             : "border-border/40 bg-muted/40 text-muted-foreground cursor-default"
-        }`}
+        } ${isToday ? "ring-2 ring-rose-300" : ""}`}
       >
         {resolvedStampSrc ? (
           <>
             <span className="absolute inset-0 flex items-center justify-center stamp-sparkle" aria-hidden="true">
               <span className="stamp-image" style={{ backgroundImage: `url(${resolvedStampSrc})` }} />
             </span>
-            <span className="absolute right-0.5 top-0.5 rounded bg-background/80 px-0.5 text-[8px] font-medium text-foreground">
+            <span className={`absolute right-0.5 top-0.5 rounded px-0.5 text-[8px] font-medium ${isToday ? "bg-rose-300 text-white" : "bg-background/80 text-foreground"}`}>
               {dayNumber}
             </span>
           </>
         ) : (
-          <span className="flex items-center gap-0.5 font-medium">
+          <span className={`flex items-center justify-center font-medium ${isToday ? "w-5 h-5 rounded-full bg-rose-300 text-white" : ""}`}>
             {dayNumber}
-            {isCompleted && <span className="ml-1">✓</span>}
+            {isCompleted && !isToday && <span className="ml-1">✓</span>}
           </span>
         )}
       </button>

@@ -28,7 +28,7 @@ import {
   type MedicalHistoryV2,
 } from "@/lib/medical-history"
 import type { AdoptionSource, CatProfile, MedicationSelection, Weekday } from "@/lib/types"
-import { Cat, ChevronDown, ChevronUp, ArrowRight, X, Trash2 } from "lucide-react"
+import { Cat, ChevronDown, ChevronUp, ArrowRight, ArrowLeft, X, Trash2 } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -489,6 +489,17 @@ export default function CatProfilePage() {
       {/* 헤더 */}
       <header className="flex-shrink-0 px-6 pt-safe-top">
         <div className="py-6">
+          {/* 뒤로가기 버튼 */}
+          {cats.length > 0 && (
+            <button
+              type="button"
+              onClick={() => router.push("/")}
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition mb-4"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              홈으로
+            </button>
+          )}
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
               <Cat className="w-5 h-5 text-primary" />
