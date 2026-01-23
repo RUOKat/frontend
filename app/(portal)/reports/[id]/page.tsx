@@ -8,14 +8,16 @@ import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/app/status-badge"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { fetchDailyReports, type DailyReport } from "@/lib/backend-care"
-import { ArrowLeft, Loader2, Calendar } from "lucide-react"
+import { ArrowLeft, Loader2, Calendar, ChevronRight, FileText } from "lucide-react"
 
 export default function ReportDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { activeCat, activeCatId } = useActiveCat()
   const [report, setReport] = useState<DailyReport | null>(null)
+  const [allReports, setAllReports] = useState<DailyReport[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [showHistory, setShowHistory] = useState(false)
 
   const reportId = params.id as string
 
@@ -26,11 +28,13 @@ export default function ReportDetailPage() {
       setIsLoading(true)
       try {
         const reports = await fetchDailyReports(activeCatId)
+        setAllReports(reports)
         const found = reports.find((r) => r.id === reportId)
         setReport(found || null)
       } catch (error) {
         console.error("Failed to load report:", error)
         setReport(null)
+        setAllReports([])
       } finally {
         setIsLoading(false)
       }
@@ -80,10 +84,59 @@ export default function ReportDetailPage() {
             <h1 className="text-lg font-bold text-foreground">일일 리포트</h1>
             <p className="text-xs text-muted-foreground">{activeCat?.name}</p>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowHistory(!showHistory)}
+            className="text-xs"
+          >
+            <FileText className="w-4 h-4 mr-1" />
+            과거 내역
+          </Button>
         </div>
       </header>
 
       <main className="px-6 py-6 pb-24 space-y-4">
+        {/* 과거 리포트 목록 */}
+        {showHistory && allReports.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <FileText className="w-4 h-4 text-primary" />
+                과거 리포트 목록
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-1 max-h-60 overflow-y-auto">
+                {allReports.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => {
+                      router.push(`/reports/${r.id}`)
+                      setShowHistory(false)
+                    }}
+                    className={`w-full flex items-center justify-between p-2 rounded-lg text-left transition ${
+                      r.id === reportId
+                        ? "bg-primary/10 border border-primary/30"
+                        : "hover:bg-muted/50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="text-sm font-medium">{r.dateLabel}</span>
+                      <span className="text-xs text-muted-foreground">{r.date}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <StatusBadge level={r.status} size="sm" />
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -102,24 +155,54 @@ export default function ReportDetailPage() {
             <div className="prose prose-sm dark:prose-invert max-w-none">
               <ReactMarkdown
                 components={{
-                  h1: ({ children }) => <h1 className="text-xl font-bold mt-4 mb-2">{children}</h1>,
-                  h2: ({ children }) => <h2 className="text-lg font-semibold mt-4 mb-2">{children}</h2>,
-                  h3: ({ children }) => <h3 className="text-base font-semibold mt-3 mb-1">{children}</h3>,
-                  p: ({ children }) => <p className="text-sm text-foreground mb-2 leading-relaxed">{children}</p>,
-                  ul: ({ children }) => <ul className="list-disc list-inside text-sm mb-2 space-y-1">{children}</ul>,
-                  ol: ({ children }) => <ol className="list-decimal list-inside text-sm mb-2 space-y-1">{children}</ol>,
-                  li: ({ children }) => <li className="text-sm text-foreground">{children}</li>,
-                  strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
-                  em: ({ children }) => <em className="italic">{children}</em>,
-                  blockquote: ({ children }) => (
-                    <blockquote className="border-l-4 border-primary/30 pl-3 my-2 text-sm text-muted-foreground italic">
+                  h1: ({ children }) => (
+                    <h1 className="text-xl font-bold mt-6 mb-3 text-primary border-b border-primary/20 pb-2">
                       {children}
+                    </h1>
+                  ),
+                  h2: ({ children }) => (
+                    <h2 className="text-lg font-bold mt-5 mb-2 text-foreground flex items-center gap-2">
+                      <span className="w-1 h-5 bg-primary rounded-full" />
+                      {children}
+                    </h2>
+                  ),
+                  h3: ({ children }) => (
+                    <h3 className="text-base font-semibold mt-4 mb-2 text-foreground/90">
+                      {children}
+                    </h3>
+                  ),
+                  p: ({ children }) => (
+                    <p className="text-sm text-foreground/80 mb-3 leading-relaxed">{children}</p>
+                  ),
+                  ul: ({ children }) => (
+                    <ul className="list-none text-sm mb-3 space-y-2 pl-1">{children}</ul>
+                  ),
+                  ol: ({ children }) => (
+                    <ol className="list-decimal list-inside text-sm mb-3 space-y-2">{children}</ol>
+                  ),
+                  li: ({ children }) => (
+                    <li className="text-sm text-foreground/80 flex items-start gap-2">
+                      <span className="text-primary mt-1.5">•</span>
+                      <span>{children}</span>
+                    </li>
+                  ),
+                  strong: ({ children }) => (
+                    <strong className="font-bold text-amber-600 dark:text-amber-400">{children}</strong>
+                  ),
+                  em: ({ children }) => (
+                    <em className="italic text-primary/80 not-italic font-medium">{children}</em>
+                  ),
+                  blockquote: ({ children }) => (
+                    <blockquote className="border-l-4 border-amber-400 bg-amber-50 dark:bg-amber-950/30 pl-4 pr-3 py-2 my-3 rounded-r-lg">
+                      <div className="text-sm text-amber-800 dark:text-amber-200">{children}</div>
                     </blockquote>
                   ),
                   code: ({ children }) => (
-                    <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{children}</code>
+                    <code className="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-xs font-semibold">
+                      {children}
+                    </code>
                   ),
-                  hr: () => <hr className="my-4 border-border" />,
+                  hr: () => <hr className="my-5 border-border/50" />,
                 }}
               >
                 {report.fullReport}

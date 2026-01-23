@@ -11,7 +11,7 @@ import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
 import { type OkatSummary } from "@/lib/okat-data"
 import { fetchMonthlyStats, fetchDailyReports, type MonthlyStats, type DailyReport } from "@/lib/backend-care"
-import { Camera, ChevronRight, ChevronDown, ClipboardList, Loader2 } from "lucide-react"
+import { Camera, ChevronRight, ClipboardList, Loader2 } from "lucide-react"
 import { CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from "recharts"
 
 function formatDateTime(value?: string | null) {
@@ -33,7 +33,6 @@ export default function OkatDashboardPage() {
   const [dailyReports, setDailyReports] = useState<DailyReport[]>([])
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStats | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [showAllReports, setShowAllReports] = useState(false)
 
   const dailyReportsKey = useMemo(() => ["dailyReports", activeCatId], [activeCatId])
 
@@ -310,14 +309,14 @@ export default function OkatDashboardPage() {
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-foreground">일일 리포트</h2>
-            {dailyReports.length > 1 && (
-              <button
-                onClick={() => setShowAllReports(!showAllReports)}
-                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition"
+            {dailyReports.length > 0 && (
+              <Link
+                href="/reports"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition"
               >
-                {showAllReports ? "접기" : `전체 보기 (${dailyReports.length})`}
-                {showAllReports ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-              </button>
+                전체 보기 ({dailyReports.length})
+                <ChevronRight className="w-4 h-4" />
+              </Link>
             )}
           </div>
 
@@ -329,7 +328,7 @@ export default function OkatDashboardPage() {
             </Card>
           ) : (
             <div className="space-y-2">
-              {(showAllReports ? dailyReports : dailyReports.slice(0, 1)).map((report) => (
+              {dailyReports.slice(0, 2).map((report) => (
                 <Link key={report.id} href={`/reports/${report.id}`}>
                   <Card className="hover:bg-muted/40 transition-colors">
                     <CardContent className="py-1 px-4">
