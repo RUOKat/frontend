@@ -10,6 +10,7 @@ export interface UpdateUserProfileData {
   profilePhoto?: string
   alarmsEnabled?: boolean
   alarmConfig?: any
+  cameraEnabled?: boolean
 }
 
 export interface UserProfile {
@@ -23,6 +24,7 @@ export interface UserProfile {
   profilePhoto?: string
   alarmsEnabled?: boolean
   alarmConfig?: any
+  cameraEnabled?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -90,6 +92,46 @@ export async function updatePushToken(
     return true
   } catch (error) {
     console.error("푸시 토큰 업데이트 실패:", error)
+    return false
+  }
+}
+
+/**
+ * 카메라 설정 조회
+ */
+export async function getCameraSettings(): Promise<{ cameraEnabled: boolean } | null> {
+  try {
+    const response = await backendFetch<any>("/users/me/camera-settings", {
+      method: "GET",
+    })
+
+    if (!response) return null
+
+    // Handle wrapped response
+    if (response.success && response.data) {
+      return response.data
+    }
+
+    return response
+  } catch (error) {
+    console.error("카메라 설정 조회 실패:", error)
+    return null
+  }
+}
+
+/**
+ * 카메라 설정 업데이트
+ */
+export async function updateCameraSettings(cameraEnabled: boolean): Promise<boolean> {
+  try {
+    await backendFetch("/users/me/camera-settings", {
+      method: "PUT",
+      body: JSON.stringify({ cameraEnabled }),
+    })
+    console.log("✅ 카메라 설정 업데이트 완료")
+    return true
+  } catch (error) {
+    console.error("카메라 설정 업데이트 실패:", error)
     return false
   }
 }

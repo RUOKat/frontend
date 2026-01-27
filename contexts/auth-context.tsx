@@ -89,8 +89,9 @@ function extractUser(payload: unknown): User | null {
       const address = typeof data.address === "string" ? data.address : undefined
       const profilePhoto = typeof data.profilePhoto === "string" ? data.profilePhoto : undefined
       const notificationsEnabled = typeof data.alarmsEnabled === "boolean" ? data.alarmsEnabled : true
+      const cameraEnabled = typeof data.cameraEnabled === "boolean" ? data.cameraEnabled : false
       
-      return { id, sub, email, name, nickname, phone, address, profilePhoto, notificationsEnabled }
+      return { id, sub, email, name, nickname, phone, address, profilePhoto, notificationsEnabled, cameraEnabled }
     }
 
     // {user: {...}} 형식
@@ -110,8 +111,9 @@ function extractUser(payload: unknown): User | null {
       const address = typeof data.address === "string" ? data.address : undefined
       const profilePhoto = typeof data.profilePhoto === "string" ? data.profilePhoto : undefined
       const notificationsEnabled = typeof data.alarmsEnabled === "boolean" ? data.alarmsEnabled : true
+      const cameraEnabled = typeof data.cameraEnabled === "boolean" ? data.cameraEnabled : false
       
-      return { id, sub, email, name, nickname, phone, address, profilePhoto, notificationsEnabled }
+      return { id, sub, email, name, nickname, phone, address, profilePhoto, notificationsEnabled, cameraEnabled }
     }
   }
 

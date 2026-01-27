@@ -126,6 +126,7 @@ export interface User {
   nickname?: string
   address?: string
   notificationsEnabled?: boolean
+  cameraEnabled?: boolean
   phone?: string
   profilePhoto?: string
 }

@@ -9,8 +9,11 @@ import { useAuth } from "@/contexts/auth-context"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
 import { useWebView } from "@/contexts/webview-context"
+import { updateCameraSettings } from "@/lib/backend-users"
+import { useState, useEffect } from "react"
 import {
   Bell,
+  Camera,
   Cat,
   LogOut,
   Settings,
@@ -24,6 +27,24 @@ export default function SettingsPage() {
   const { shelterShareOptIn } = useOnboarding()
   const { isWebView, appEnv, tokens } = useWebView()
   const isDev = process.env.NODE_ENV === "development"
+  
+  const [cameraEnabled, setCameraEnabled] = useState(user?.cameraEnabled ?? false)
+
+  useEffect(() => {
+    setCameraEnabled(user?.cameraEnabled ?? false)
+  }, [user?.cameraEnabled])
+
+  const handleCameraToggle = async (enabled: boolean) => {
+    setCameraEnabled(enabled)
+    const success = await updateCameraSettings(enabled)
+    if (success) {
+      // 사용자 정보 업데이트
+      updateUser({ cameraEnabled: enabled })
+    } else {
+      // 실패 시 원래 상태로 되돌림
+      setCameraEnabled(!enabled)
+    }
+  }
 
   const catCount = cats.length
   const loginMethodLabel = user?.email ? "이메일" : "데모"
@@ -86,6 +107,24 @@ export default function SettingsPage() {
                         checked={notificationsEnabled}
                         onCheckedChange={(enabled) => updateUser({ notificationsEnabled: enabled })}
                       />
+                    </div>
+                    
+                    <div className="border-t border-border/60 pt-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                            <Camera className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">펫캠 사용</p>
+                            <p className="text-xs text-muted-foreground">영상 촬영 및 업로드 기능</p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={cameraEnabled}
+                          onCheckedChange={handleCameraToggle}
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
