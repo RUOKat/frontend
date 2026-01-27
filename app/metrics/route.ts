@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server';
 import * as client from 'prom-client';
 
-// 메트릭 초기화 (route 파일에서 직접)
+// Node.js 런타임 강제
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+// 메트릭 초기화
 const register = new client.Registry();
 
-// 기본 메트릭 수집
 client.collectDefaultMetrics({
   register,
   prefix: 'nextjs_',
 });
 
-// 커스텀 메트릭
 new client.Counter({
   name: 'nextjs_http_requests_total',
   help: 'Total number of HTTP requests',
@@ -45,5 +47,3 @@ export async function GET() {
     return NextResponse.json({ error: 'Failed to collect metrics' }, { status: 500 });
   }
 }
-
-export const dynamic = 'force-dynamic';
