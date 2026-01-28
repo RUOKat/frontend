@@ -77,7 +77,9 @@ export async function backendFetch<T = unknown>(path: string, options: BackendFe
   const headers = new Headers(options.headers ?? {})
   const url = buildUrl(path)
 
-  if (!headers.has("Content-Type")) {
+  // FormData가 아닐 때만 Content-Type 설정 (FormData는 브라우저가 자동 설정)
+  const isFormData = options.body instanceof FormData
+  if (!headers.has("Content-Type") && !isFormData) {
     headers.set("Content-Type", "application/json")
   }
   if (accessToken) {
