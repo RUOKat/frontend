@@ -295,3 +295,72 @@ export async function fetchDailyReports(petId: string): Promise<DailyReport[]> {
 
   return [];
 }
+
+export interface HealthContext {
+  riskLevel: string;
+  riskTags: string[];
+  summary: string;
+  status: string;
+  updatedAt: string;
+  todayObservations: string[];
+}
+
+/**
+ * 건강 컨텍스트 조회 (UpdatedContextTable - 위험도, 태그, 요약)
+ */
+export async function fetchHealthContext(petId: string): Promise<HealthContext | null> {
+  const response = await backendFetch<any>(
+    `/care/${petId}/health-context`,
+    {
+      method: 'GET',
+    }
+  );
+
+  if (!response) {
+    return null;
+  }
+
+  // Handle wrapped response {success: true, data: {...}}
+  if (response.success && response.data) {
+    return response.data as HealthContext;
+  }
+
+  // Handle direct response
+  return response as HealthContext;
+}
+
+export interface HealthTrend {
+  trendData: {
+    date: string;
+    abnormalCount: number;
+    totalCount: number;
+    score: number;
+  }[];
+  healthScore: number | null;
+  recentSymptoms: string[];
+  totalDiagnoses: number;
+}
+
+/**
+ * 건강 트렌드 조회 (DiagnosticTable - 진단 답변 기반 이상 증상 추이)
+ */
+export async function fetchHealthTrend(petId: string): Promise<HealthTrend | null> {
+  const response = await backendFetch<any>(
+    `/care/${petId}/health-trend`,
+    {
+      method: 'GET',
+    }
+  );
+
+  if (!response) {
+    return null;
+  }
+
+  // Handle wrapped response {success: true, data: {...}}
+  if (response.success && response.data) {
+    return response.data as HealthTrend;
+  }
+
+  // Handle direct response
+  return response as HealthTrend;
+}
