@@ -24,6 +24,7 @@ function formatDateTime(value?: string | null) {
 type MetricPoint = {
   day: number
   value: number
+  label?: string
 }
 
 export default function OkatDashboardPage() {
@@ -157,16 +158,30 @@ export default function OkatDashboardPage() {
       // 실제 데이터 사용
       chartData = monthlyStats.dailyData.map((d) => {
         let value = 50 // 기본값
-        if (metric.id === 'food') value = d.food
-        else if (metric.id === 'water') value = d.water
-        else if (metric.id === 'stool') value = d.stool
-        else if (metric.id === 'urine') value = d.urine
-        else if (metric.id === 'weight' && d.weight !== null) value = d.weight * 10 // 체중은 스케일 조정
-        return { day: d.day, value }
+        let label = '기록 없음'
+        
+        if (metric.id === 'food') {
+          value = d.food
+          label = d.foodLabel
+        } else if (metric.id === 'water') {
+          value = d.water
+          label = d.waterLabel
+        } else if (metric.id === 'stool') {
+          value = d.stool
+          label = d.stoolLabel
+        } else if (metric.id === 'urine') {
+          value = d.urine
+          label = d.urineLabel
+        } else if (metric.id === 'weight' && d.weight !== null) {
+          value = d.weight * 10 // 체중은 스케일 조정
+          label = `${d.weight}kg`
+        }
+        
+        return { day: d.day, value, label }
       })
     } else {
       // 데이터 없으면 빈 차트
-      chartData = [{ day: 1, value: 50 }]
+      chartData = [{ day: 1, value: 50, label: '기록 없음' }]
     }
     
     return {
@@ -263,7 +278,7 @@ export default function OkatDashboardPage() {
                             const data = payload[0].payload as MetricPoint
                             return (
                               <div className="rounded-md border bg-background px-2 py-1 shadow-sm">
-                                <p className="text-xs font-medium">{metric.label}: {data.value}</p>
+                                <p className="text-xs font-medium">{metric.label}: {data.label || data.value}</p>
                                 <p className="text-xs text-muted-foreground">Day {data.day}</p>
                               </div>
                             )

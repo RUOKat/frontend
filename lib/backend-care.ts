@@ -223,6 +223,10 @@ export interface MonthlyStats {
     stool: number;
     urine: number;
     weight: number | null;
+    foodLabel: string;
+    waterLabel: string;
+    stoolLabel: string;
+    urineLabel: string;
   }[];
 }
 
