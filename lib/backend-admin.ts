@@ -39,11 +39,46 @@ export interface AdminPet {
   weight: number
   birthDate?: string
   createdAt: string
+  profilePhoto?: string
+  // 추가 필드들
+  adoptionPath?: string
+  adoptionSource?: string
+  adoptionAgencyCode?: string
+  agencyCode?: string
+  dataSharing?: any
+  careShareStartAt?: string
+  careShareEndAt?: string
+  familyDate?: string
+  estimatedAge?: number
+  unknownBirthday?: boolean
+  neutered?: boolean
+  bcs?: number
+  foodType?: string
+  waterSource?: string
+  surveyFrequencyPerWeek?: number
+  surveyDays?: string[]
+  activityLevel?: string
+  livingEnvironment?: string
+  multiCat?: boolean
+  catCount?: number
+  mealsPerDay?: number
+  waterIntakeTendency?: string
+  medicalHistory?: any
+  medications?: string
+  medicationText?: string
+  medicationsSelected?: any
+  medicationOtherText?: string
+  notes?: string
+  vetInfo?: string
+  notificationPreference?: string
   user: {
     id: string
     name?: string
     email?: string
+    phoneNumber?: string
+    address?: string
   }
+  careLogs?: any[]
 }
 
 export interface AdminCareLog {

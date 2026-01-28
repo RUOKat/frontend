@@ -32,19 +32,18 @@ import {
 } from "@/lib/backend-medical-providers"
 import {
   getAllPets,
-  getAllCareLogs,
+  getCareLogsByPet,
   type AdminPet,
   type AdminCareLog,
 } from "@/lib/backend-admin"
 import { Building2, Stethoscope, Hospital, Plus, Pencil, Trash2, Cat, ClipboardList } from "lucide-react"
-import { useRouter } from "next/navigation"
 
 export default function AdminPage() {
-  const router = useRouter()
   const [providers, setProviders] = useState<MedicalProvider[]>([])
   const [pets, setPets] = useState<AdminPet[]>([])
-  const [careLogs, setCareLogs] = useState<AdminCareLog[]>([])
+  const [petCareLogs, setPetCareLogs] = useState<AdminCareLog[]>([])
   const [loading, setLoading] = useState(true)
+  const [careLogsLoading, setCareLogsLoading] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [petDetailOpen, setPetDetailOpen] = useState(false)
   const [careLogDetailOpen, setCareLogDetailOpen] = useState(false)
@@ -69,7 +68,6 @@ export default function AdminPage() {
     await Promise.all([
       loadProviders(),
       loadPets(),
-      loadCareLogs(),
     ])
     setLoading(false)
   }
@@ -84,9 +82,11 @@ export default function AdminPage() {
     setPets(data)
   }
 
-  const loadCareLogs = async () => {
-    const data = await getAllCareLogs()
-    setCareLogs(data)
+  const loadPetCareLogs = async (petId: string) => {
+    setCareLogsLoading(true)
+    const data = await getCareLogsByPet(petId)
+    setPetCareLogs(data)
+    setCareLogsLoading(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -129,9 +129,10 @@ export default function AdminPage() {
     }
   }
 
-  const handlePetClick = (pet: AdminPet) => {
+  const handlePetClick = async (pet: AdminPet) => {
     setSelectedPet(pet)
     setPetDetailOpen(true)
+    await loadPetCareLogs(pet.id)
   }
 
   const handleCareLogClick = (log: AdminCareLog) => {
@@ -188,10 +189,9 @@ export default function AdminPage() {
 
       <main className="px-6 py-6">
         <Tabs defaultValue="providers" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="providers">기관/의사</TabsTrigger>
             <TabsTrigger value="pets">고양이</TabsTrigger>
-            <TabsTrigger value="logs">진료내역</TabsTrigger>
           </TabsList>
 
           {/* 기관/의사 탭 */}
@@ -383,9 +383,17 @@ export default function AdminPage() {
                   >
                     <CardHeader className="pb-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Cat className="w-5 h-5" />
-                        </div>
+                        {pet.profilePhoto ? (
+                          <img 
+                            src={pet.profilePhoto} 
+                            alt={pet.name}
+                            className="w-12 h-12 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Cat className="w-6 h-6" />
+                          </div>
+                        )}
                         <div>
                           <CardTitle className="text-lg">{pet.name}</CardTitle>
                           <p className="text-sm text-muted-foreground">
@@ -397,7 +405,7 @@ export default function AdminPage() {
                     <CardContent className="space-y-2">
                       <p className="text-sm text-muted-foreground">품종: {pet.breed}</p>
                       <p className="text-sm text-muted-foreground">
-                        성별: {pet.gender === "male" ? "수컷" : "암컷"}
+                        성별: {pet.gender === "male" ? "수컷" : "암컷"} {pet.neutered ? "(중성화)" : ""}
                       </p>
                       <p className="text-sm text-muted-foreground">체중: {pet.weight}kg</p>
                       {pet.birthDate && (
@@ -425,6 +433,21 @@ export default function AdminPage() {
                 </DialogHeader>
                 {selectedPet && (
                   <div className="space-y-6">
+                    {/* 프로필 사진 */}
+                    <div className="flex justify-center">
+                      {selectedPet.profilePhoto ? (
+                        <img 
+                          src={selectedPet.profilePhoto} 
+                          alt={selectedPet.name}
+                          className="w-32 h-32 rounded-full object-cover border-4 border-primary/20"
+                        />
+                      ) : (
+                        <div className="w-32 h-32 rounded-full bg-primary/10 flex items-center justify-center border-4 border-primary/20">
+                          <Cat className="w-16 h-16 text-primary/50" />
+                        </div>
+                      )}
+                    </div>
+
                     {/* 기본 정보 */}
                     <div className="space-y-3">
                       <h3 className="font-semibold text-lg border-b pb-2">기본 정보</h3>
@@ -444,14 +467,38 @@ export default function AdminPage() {
                           </p>
                         </div>
                         <div>
+                          <p className="text-sm text-muted-foreground">중성화</p>
+                          <p className="font-medium">{selectedPet.neutered ? "완료" : "미완료"}</p>
+                        </div>
+                        <div>
                           <p className="text-sm text-muted-foreground">체중</p>
                           <p className="font-medium">{selectedPet.weight}kg</p>
                         </div>
+                        {selectedPet.bcs && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">BCS</p>
+                            <p className="font-medium">{selectedPet.bcs}</p>
+                          </div>
+                        )}
                         {selectedPet.birthDate && (
                           <div>
                             <p className="text-sm text-muted-foreground">생년월일</p>
                             <p className="font-medium">
                               {new Date(selectedPet.birthDate).toLocaleDateString("ko-KR")}
+                            </p>
+                          </div>
+                        )}
+                        {selectedPet.estimatedAge && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">추정 나이</p>
+                            <p className="font-medium">{selectedPet.estimatedAge}세</p>
+                          </div>
+                        )}
+                        {selectedPet.familyDate && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">가족이 된 날</p>
+                            <p className="font-medium">
+                              {new Date(selectedPet.familyDate).toLocaleDateString("ko-KR")}
                             </p>
                           </div>
                         )}
@@ -463,6 +510,144 @@ export default function AdminPage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* 입양 정보 */}
+                    {selectedPet.adoptionPath && (
+                      <div className="space-y-3">
+                        <h3 className="font-semibold text-lg border-b pb-2">입양 정보</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-sm text-muted-foreground">입양 경로</p>
+                            <p className="font-medium">{selectedPet.adoptionPath}</p>
+                          </div>
+                          {selectedPet.adoptionSource && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">입양처</p>
+                              <p className="font-medium">{selectedPet.adoptionSource}</p>
+                            </div>
+                          )}
+                          {selectedPet.adoptionAgencyCode && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">기관 코드</p>
+                              <p className="font-medium">{selectedPet.adoptionAgencyCode}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 식이/생활 정보 */}
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-lg border-b pb-2">식이/생활 정보</h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        {selectedPet.foodType && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">사료 타입</p>
+                            <p className="font-medium">{selectedPet.foodType}</p>
+                          </div>
+                        )}
+                        {selectedPet.waterSource && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">물 공급원</p>
+                            <p className="font-medium">{selectedPet.waterSource}</p>
+                          </div>
+                        )}
+                        {selectedPet.mealsPerDay && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">하루 식사 횟수</p>
+                            <p className="font-medium">{selectedPet.mealsPerDay}회</p>
+                          </div>
+                        )}
+                        {selectedPet.waterIntakeTendency && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">음수량 경향</p>
+                            <p className="font-medium">{selectedPet.waterIntakeTendency}</p>
+                          </div>
+                        )}
+                        {selectedPet.activityLevel && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">활동량</p>
+                            <p className="font-medium">{selectedPet.activityLevel}</p>
+                          </div>
+                        )}
+                        {selectedPet.livingEnvironment && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">생활 환경</p>
+                            <p className="font-medium">{selectedPet.livingEnvironment}</p>
+                          </div>
+                        )}
+                        {selectedPet.multiCat !== undefined && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">다묘 가정</p>
+                            <p className="font-medium">
+                              {selectedPet.multiCat ? `예 (${selectedPet.catCount || 0}마리)` : "아니오"}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 설문 설정 */}
+                    {(selectedPet.surveyFrequencyPerWeek || selectedPet.surveyDays?.length) && (
+                      <div className="space-y-3">
+                        <h3 className="font-semibold text-lg border-b pb-2">설문 설정</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          {selectedPet.surveyFrequencyPerWeek && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">주간 설문 횟수</p>
+                              <p className="font-medium">{selectedPet.surveyFrequencyPerWeek}회</p>
+                            </div>
+                          )}
+                          {selectedPet.surveyDays && selectedPet.surveyDays.length > 0 && (
+                            <div>
+                              <p className="text-sm text-muted-foreground">설문 요일</p>
+                              <p className="font-medium">{selectedPet.surveyDays.join(", ")}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 의료 정보 */}
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-lg border-b pb-2">의료 정보</h3>
+                      <div className="space-y-3">
+                        {selectedPet.medications && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">복용 약물</p>
+                            <p className="font-medium">{selectedPet.medications}</p>
+                          </div>
+                        )}
+                        {selectedPet.medicationText && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">약물 상세</p>
+                            <p className="font-medium">{selectedPet.medicationText}</p>
+                          </div>
+                        )}
+                        {selectedPet.vetInfo && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">담당 수의사</p>
+                            <p className="font-medium">{selectedPet.vetInfo}</p>
+                          </div>
+                        )}
+                        {selectedPet.medicalHistory && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">의료 기록</p>
+                            <pre className="text-sm bg-muted p-3 rounded overflow-hidden whitespace-pre-wrap break-all">
+                              {JSON.stringify(selectedPet.medicalHistory, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 메모 */}
+                    {selectedPet.notes && (
+                      <div className="space-y-3">
+                        <h3 className="font-semibold text-lg border-b pb-2">메모</h3>
+                        <p className="text-sm">{selectedPet.notes}</p>
+                      </div>
+                    )}
 
                     {/* 보호자 정보 */}
                     <div className="space-y-3">
@@ -476,97 +661,84 @@ export default function AdminPage() {
                           <p className="text-sm text-muted-foreground">이메일</p>
                           <p className="font-medium">{selectedPet.user.email || "-"}</p>
                         </div>
+                        {selectedPet.user.phoneNumber && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">연락처</p>
+                            <p className="font-medium">{selectedPet.user.phoneNumber}</p>
+                          </div>
+                        )}
+                        {selectedPet.user.address && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">주소</p>
+                            <p className="font-medium">{selectedPet.user.address}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    {/* 추가 정보 */}
-                    {(selectedPet as any).foodType && (
+                    {/* 데이터 공유 정보 */}
+                    {selectedPet.dataSharing && (
                       <div className="space-y-3">
-                        <h3 className="font-semibold text-lg border-b pb-2">식이 정보</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <p className="text-sm text-muted-foreground">사료 타입</p>
-                            <p className="font-medium">{(selectedPet as any).foodType}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">물 공급원</p>
-                            <p className="font-medium">{(selectedPet as any).waterSource}</p>
-                          </div>
-                        </div>
+                        <h3 className="font-semibold text-lg border-b pb-2">데이터 공유</h3>
+                        <pre className="text-sm bg-muted p-3 rounded overflow-hidden whitespace-pre-wrap break-all">
+                          {JSON.stringify(selectedPet.dataSharing, null, 2)}
+                        </pre>
                       </div>
                     )}
 
-                    {/* 의료 정보 */}
-                    {(selectedPet as any).medicalHistory && (
-                      <div className="space-y-3">
-                        <h3 className="font-semibold text-lg border-b pb-2">의료 정보</h3>
-                        <div className="text-sm">
-                          <pre className="whitespace-pre-wrap bg-muted p-3 rounded">
-                            {JSON.stringify((selectedPet as any).medicalHistory, null, 2)}
-                          </pre>
+                    {/* 진료내역 */}
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-lg border-b pb-2">
+                        진료내역 ({petCareLogs.length}건)
+                      </h3>
+                      {careLogsLoading ? (
+                        <div className="text-center py-4 text-muted-foreground">로딩 중...</div>
+                      ) : petCareLogs.length === 0 ? (
+                        <p className="text-sm text-muted-foreground py-4 text-center">
+                          진료내역이 없습니다.
+                        </p>
+                      ) : (
+                        <div className="space-y-2 max-h-80 overflow-y-auto">
+                          {petCareLogs.map((log) => (
+                            <div
+                              key={log.id}
+                              className="p-3 bg-muted rounded-lg cursor-pointer hover:bg-muted/80 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleCareLogClick(log)
+                              }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <ClipboardList className="w-4 h-4 text-primary" />
+                                  <span className="font-medium">{log.date}</span>
+                                </div>
+                                <span className="text-xs text-muted-foreground">
+                                  {log.type === "checkin" ? "간편 체크인" : "진단"}
+                                </span>
+                              </div>
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                {log.answers && `기본 답변: ${Object.keys(log.answers).length}개`}
+                                {log.answers && log.diagAnswers && " / "}
+                                {log.diagAnswers && `진단 답변: ${Object.keys(log.diagAnswers).length}개`}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
+
+                    {/* Raw JSON 데이터 */}
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-lg border-b pb-2">전체 데이터 (JSON)</h3>
+                      <pre className="text-xs bg-muted p-3 rounded overflow-hidden whitespace-pre-wrap break-all">
+                        {JSON.stringify(selectedPet, null, 2)}
+                      </pre>
+                    </div>
                   </div>
                 )}
               </DialogContent>
             </Dialog>
-          </TabsContent>
-
-          {/* 진료내역 탭 */}
-          <TabsContent value="logs" className="space-y-4">
-            {loading ? (
-              <div className="text-center py-12 text-muted-foreground">로딩 중...</div>
-            ) : careLogs.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  진료내역이 없습니다.
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4">
-                {careLogs.map((log) => (
-                  <Card 
-                    key={log.id}
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleCareLogClick(log)}
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <ClipboardList className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-lg">{log.pet.name}</CardTitle>
-                          <p className="text-sm text-muted-foreground">
-                            {log.pet.user.name || log.pet.user.email}
-                          </p>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <p className="text-sm text-muted-foreground">날짜: {log.date}</p>
-                      <p className="text-sm text-muted-foreground">
-                        타입: {log.type === "checkin" ? "간편 체크인" : "진단"}
-                      </p>
-                      {log.answers && (
-                        <p className="text-sm text-muted-foreground">
-                          기본 답변: {Object.keys(log.answers).length}개
-                        </p>
-                      )}
-                      {log.diagAnswers && (
-                        <p className="text-sm text-muted-foreground">
-                          진단 답변: {Object.keys(log.diagAnswers).length}개
-                        </p>
-                      )}
-                      <p className="text-sm text-muted-foreground border-t pt-2 mt-2">
-                        기록일: {new Date(log.createdAt).toLocaleString("ko-KR")}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
 
             {/* 진료내역 상세 정보 Dialog */}
             <Dialog open={careLogDetailOpen} onOpenChange={setCareLogDetailOpen}>
@@ -583,16 +755,6 @@ export default function AdminPage() {
                     <div className="space-y-3">
                       <h3 className="font-semibold text-lg border-b pb-2">기본 정보</h3>
                       <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <p className="text-sm text-muted-foreground">고양이</p>
-                          <p className="font-medium">{selectedCareLog.pet.name}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">보호자</p>
-                          <p className="font-medium">
-                            {selectedCareLog.pet.user.name || selectedCareLog.pet.user.email}
-                          </p>
-                        </div>
                         <div>
                           <p className="text-sm text-muted-foreground">날짜</p>
                           <p className="font-medium">{selectedCareLog.date}</p>
@@ -646,35 +808,10 @@ export default function AdminPage() {
                       </div>
                     )}
 
-                    {/* 알림 전송 정보 */}
-                    {((selectedCareLog as any).diagNotificationSentAt || (selectedCareLog as any).reportNotificationSentAt) && (
-                      <div className="space-y-3">
-                        <h3 className="font-semibold text-lg border-b pb-2">알림 전송 정보</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                          {(selectedCareLog as any).diagNotificationSentAt && (
-                            <div>
-                              <p className="text-sm text-muted-foreground">진단 알림 전송</p>
-                              <p className="font-medium">
-                                {new Date((selectedCareLog as any).diagNotificationSentAt).toLocaleString("ko-KR")}
-                              </p>
-                            </div>
-                          )}
-                          {(selectedCareLog as any).reportNotificationSentAt && (
-                            <div>
-                              <p className="text-sm text-muted-foreground">리포트 알림 전송</p>
-                              <p className="font-medium">
-                                {new Date((selectedCareLog as any).reportNotificationSentAt).toLocaleString("ko-KR")}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
                     {/* Raw JSON 데이터 */}
                     <div className="space-y-3">
                       <h3 className="font-semibold text-lg border-b pb-2">전체 데이터 (JSON)</h3>
-                      <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">
+                      <pre className="text-xs bg-muted p-3 rounded overflow-hidden whitespace-pre-wrap break-all">
                         {JSON.stringify(selectedCareLog, null, 2)}
                       </pre>
                     </div>
