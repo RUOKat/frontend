@@ -92,23 +92,72 @@ export default function OkatDashboardPage() {
       const year = now.getFullYear()
       const month = now.getMonth() + 1
       
-      // 병렬로 모든 데이터 로드
-      const [stats, reports, context, trend] = await Promise.all([
+      // 이전 달 계산
+      const prevMonth = month === 1 ? 12 : month - 1
+      const prevYear = month === 1 ? year - 1 : year
+      
+      // 병렬로 모든 데이터 로드 (현재 월 + 이전 월 통계)
+      const [currentStats, prevStats, reports, context, trend] = await Promise.all([
         fetchMonthlyStats(activeCatId, year, month),
+        fetchMonthlyStats(activeCatId, prevYear, prevMonth),
         fetchDailyReports(activeCatId),
         fetchHealthContext(activeCatId),
         fetchHealthTrend(activeCatId),
       ])
       
-      setMonthlyStats(stats)
+      // 두 달의 통계 합치기
+      let combinedStats: MonthlyStats | null = null
+      if (currentStats || prevStats) {
+        const currentDailyData = currentStats?.dailyData || []
+        const prevDailyData = prevStats?.dailyData || []
+        
+        // 이전 달 데이터에 월 정보 추가 (day를 음수로 표시하여 구분)
+        const prevDailyDataWithMonth = prevDailyData.map(d => ({
+          ...d,
+          day: d.day - 31, // 이전 달은 음수로 표시
+        }))
+        
+        // 최근 30일 데이터만 필터링
+        const today = now.getDate()
+        const allDailyData = [...prevDailyDataWithMonth, ...currentDailyData]
+        const last30DaysData = allDailyData.slice(-30)
+        
+        // 통계 합산
+        const combineCategory = (curr: any, prev: any) => ({
+          normal: (curr?.normal || 0) + (prev?.normal || 0),
+          less: (curr?.less || 0) + (prev?.less || 0),
+          more: (curr?.more || 0) + (prev?.more || 0),
+          none: (curr?.none || 0) + (prev?.none || 0),
+          ...(curr?.diarrhea !== undefined ? { diarrhea: (curr?.diarrhea || 0) + (prev?.diarrhea || 0) } : {}),
+        })
+        
+        combinedStats = {
+          totalDays: (currentStats?.totalDays || 0) + (prevStats?.totalDays || 0),
+          food: combineCategory(currentStats?.food, prevStats?.food),
+          water: combineCategory(currentStats?.water, prevStats?.water),
+          stool: combineCategory(currentStats?.stool, prevStats?.stool) as any,
+          urine: combineCategory(currentStats?.urine, prevStats?.urine),
+          latestWeight: currentStats?.latestWeight ?? prevStats?.latestWeight ?? null,
+          weightChange: currentStats?.weightChange ?? prevStats?.weightChange ?? null,
+          avgWeight: currentStats?.avgWeight ?? prevStats?.avgWeight ?? null,
+          dailyData: last30DaysData.map((d, idx) => ({
+            ...d,
+            day: idx + 1, // 1부터 시작하도록 재정렬
+          })),
+        }
+      }
+      
+      setMonthlyStats(combinedStats)
       setDailyReports(reports)
       setHealthContext(context)
       setHealthTrend(trend)
       
       // 디버깅용 로그
       console.log('Health context:', context)
+      console.log('Combined stats:', combinedStats)
       
       // 통계 기반으로 summary 생성
+      const stats = combinedStats
       if (stats && stats.totalDays > 0) {
         const totalRecords = stats.totalDays
         const normalCount = stats.food.normal + stats.water.normal + stats.stool.normal + stats.urine.normal
@@ -133,7 +182,7 @@ export default function OkatDashboardPage() {
         
         setSummary({
           status,
-          coverage: { daysWithData: totalRecords, totalDays: now.getDate() },
+          coverage: { daysWithData: totalRecords, totalDays: 30 },
           updatedAt: new Date().toISOString(),
           metrics: [
             { 
@@ -179,7 +228,7 @@ export default function OkatDashboardPage() {
   }, [dailyReportsKey, activeCatId, loadAllData])
 
   const coverageLabel = summary
-    ? `최근 ${summary.coverage.totalDays}일 중 ${summary.coverage.daysWithData}일 기록`
+    ? `최근 30일 중 ${summary.coverage.daysWithData}일 기록`
     : "최근 기록이 없어요"
   const fallbackMetricTrendLabel = summary?.coverage?.daysWithData
     ? `최근 ${summary.coverage.daysWithData}일 기준`

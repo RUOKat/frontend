@@ -11,7 +11,7 @@ import { CatSelector } from "@/components/app/cat-selector"
 import { CareBenefitPromo } from "@/components/app/care-benefit-promo"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { fetchMonthlyCare, fetchCareLogByDate, fetchDiagQuestions, type CareLog } from "@/lib/backend-care"
-import { Calendar, MessageCircle, ExternalLink, Bell, Trash2, Loader2 } from "lucide-react"
+import { Calendar, MessageCircle, ExternalLink, Bell, Trash2, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
 import { fetchNotifications, markNotificationAsRead, deleteNotification, type Notification } from "@/lib/backend-notifications"
 import { getTokens } from "@/lib/backend"
@@ -69,7 +69,55 @@ export default function HomePage() {
   const [isCheckingDiag, setIsCheckingDiag] = useState(false)
   const [noDiagQuestionsOpen, setNoDiagQuestionsOpen] = useState(false)
 
-  // 월간 케어 기록 로드
+  // 캘린더 월 선택 상태
+  const [calendarDate, setCalendarDate] = useState(() => new Date())
+  const [isLoadingCalendar, setIsLoadingCalendar] = useState(false)
+  const [calendarCareData, setCalendarCareData] = useState<string[]>([])
+
+  // 캘린더 월 변경
+  const handlePrevMonth = () => {
+    setCalendarDate(prev => {
+      const newDate = new Date(prev)
+      newDate.setMonth(newDate.getMonth() - 1)
+      return newDate
+    })
+  }
+
+  const handleNextMonth = () => {
+    const now = new Date()
+    setCalendarDate(prev => {
+      const newDate = new Date(prev)
+      newDate.setMonth(newDate.getMonth() + 1)
+      // 미래 달로는 이동 불가
+      if (newDate > now) return prev
+      return newDate
+    })
+  }
+
+  // 선택된 월의 케어 데이터 로드
+  const loadCalendarData = useCallback(async () => {
+    if (!activeCatId) return
+    
+    setIsLoadingCalendar(true)
+    try {
+      const year = calendarDate.getFullYear()
+      const month = calendarDate.getMonth() + 1
+      const data = await fetchMonthlyCare(activeCatId, year, month)
+      setCalendarCareData(data.completedDays)
+    } catch (error) {
+      console.error('Failed to load calendar data:', error)
+      setCalendarCareData([])
+    } finally {
+      setIsLoadingCalendar(false)
+    }
+  }, [activeCatId, calendarDate])
+
+  // 캘린더 월 변경 시 데이터 로드
+  useEffect(() => {
+    loadCalendarData()
+  }, [loadCalendarData])
+
+  // 월간 케어 기록 로드 (현재 월 + 이전 월)
   const loadMonthlyCare = useCallback(async () => {
     if (!activeCatId) return
 
@@ -77,17 +125,32 @@ export default function HomePage() {
     const year = now.getFullYear()
     const month = now.getMonth() + 1
 
+    // 이전 달 계산
+    const prevMonth = month === 1 ? 12 : month - 1
+    const prevYear = month === 1 ? year - 1 : year
+
     try {
-      const data = await fetchMonthlyCare(activeCatId, year, month)
+      // 현재 월과 이전 월 데이터 동시 조회
+      const [currentData, prevData] = await Promise.all([
+        fetchMonthlyCare(activeCatId, year, month),
+        fetchMonthlyCare(activeCatId, prevYear, prevMonth),
+      ])
+
+      // 두 달의 데이터 합치기
+      const allCompletedDays = [
+        ...prevData.completedDays,
+        ...currentData.completedDays,
+      ]
+
       setMonthlyCare({
-        completedDays: data.completedDays,
+        completedDays: allCompletedDays,
         streak: 0,
-        completionRate: data.completedDays.length / now.getDate(),
+        completionRate: currentData.completedDays.length / now.getDate(),
       })
       
       // 오늘의 케어 로그 로드 (진단설문 버튼 표시 여부 판단용)
       const todayISO = `${year}-${String(month).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
-      if (data.completedDays.includes(todayISO)) {
+      if (currentData.completedDays.includes(todayISO)) {
         try {
           const careLog = await fetchCareLogByDate(activeCatId, todayISO)
           setTodayCareLog(careLog)
@@ -363,15 +426,23 @@ export default function HomePage() {
     return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" })
   }
 
-  const monthLabel = new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long" })
+  const monthLabel = calendarDate.toLocaleDateString("ko-KR", { year: "numeric", month: "long" })
 
   const formatISODate = (year: number, monthIndex: number, day: number) =>
     `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
 
   const now = new Date()
-  const year = now.getFullYear()
-  const monthIndex = now.getMonth()
-  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate()
+  
+  // 캘린더에 표시할 월 (선택된 월)
+  const calYear = calendarDate.getFullYear()
+  const calMonthIndex = calendarDate.getMonth()
+  const calDaysInMonth = new Date(calYear, calMonthIndex + 1, 0).getDate()
+  
+  // 현재 월인지 확인
+  const isCurrentMonth = calYear === now.getFullYear() && calMonthIndex === now.getMonth()
+  // 미래 달로 이동 불가 체크
+  const canGoNext = !(calYear === now.getFullYear() && calMonthIndex >= now.getMonth())
+  
   const weekDayIndexMap = {
     sun: 0,
     mon: 1,
@@ -387,19 +458,21 @@ export default function HomePage() {
   const surveyTargetDays = new Set<number>()
 
   if (scheduledDaySet.size > 0) {
-    for (let day = 1; day <= daysInMonth; day += 1) {
-      const dayIndex = new Date(year, monthIndex, day).getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6
+    for (let day = 1; day <= calDaysInMonth; day += 1) {
+      const dayIndex = new Date(calYear, calMonthIndex, day).getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6
       if (scheduledDaySet.has(dayIndex)) {
         surveyTargetDays.add(day)
       }
     }
   }
 
+  // 선택된 월의 완료된 날짜 (캘린더용)
+  const calCompletedSet = new Set(calendarCareData)
   const surveyCompletedDays = new Set<number>()
   if (scheduledDaySet.size > 0) {
-    monthlyCare.completedDays.forEach((dateISO) => {
+    calendarCareData.forEach((dateISO) => {
       const [dateYear, dateMonth, dateDay] = dateISO.split("-").map(Number)
-      if (dateYear !== year || dateMonth !== monthIndex + 1) return
+      if (dateYear !== calYear || dateMonth !== calMonthIndex + 1) return
       const dayIndex = new Date(dateYear, dateMonth - 1, dateDay).getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6
       if (scheduledDaySet.has(dayIndex)) {
         surveyCompletedDays.add(dateDay)
@@ -408,11 +481,47 @@ export default function HomePage() {
   }
 
   const hasSchedule = scheduledDaySet.size > 0
-  const targetDays = hasSchedule ? surveyTargetDays.size : Math.max(1, now.getDate())
-  const completedSurveyDays = hasSchedule ? surveyCompletedDays.size : monthlyCare.completedDays.length
-  const completionRatePercent = hasSchedule
-    ? Math.round((completedSurveyDays / Math.max(1, targetDays)) * 100)
-    : Math.round(monthlyCare.completionRate * 100)
+  
+  // 선택된 월 기준으로 통계 계산
+  // 현재 월이면 오늘까지, 과거 월이면 해당 월 전체
+  const calMaxDay = isCurrentMonth ? now.getDate() : calDaysInMonth
+  
+  // 선택된 월의 스케줄된 날짜 수
+  let calScheduledCount = 0
+  if (hasSchedule) {
+    for (let day = 1; day <= calMaxDay; day++) {
+      const dayIndex = new Date(calYear, calMonthIndex, day).getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6
+      if (scheduledDaySet.has(dayIndex)) {
+        calScheduledCount++
+      }
+    }
+  }
+
+  // 선택된 월의 완료된 날짜 수
+  const calCompletedCount = calendarCareData.filter(dateISO => {
+    const [y, m, d] = dateISO.split("-").map(Number)
+    return y === calYear && m === calMonthIndex + 1 && d <= calMaxDay
+  }).length
+
+  // 선택된 월의 스케줄된 날짜 중 완료된 날짜 수
+  let calScheduledCompletedCount = 0
+  if (hasSchedule) {
+    calendarCareData.forEach(dateISO => {
+      const [y, m, d] = dateISO.split("-").map(Number)
+      if (y !== calYear || m !== calMonthIndex + 1 || d > calMaxDay) return
+      const dayIndex = new Date(y, m - 1, d).getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6
+      if (scheduledDaySet.has(dayIndex)) {
+        calScheduledCompletedCount++
+      }
+    })
+  }
+
+  const targetDays = hasSchedule ? calScheduledCount : calMaxDay
+  const completedSurveyDays = hasSchedule ? calScheduledCompletedCount : calCompletedCount
+  const completionRatePercent = Math.round((completedSurveyDays / Math.max(1, targetDays)) * 100)
+  
+  const year = now.getFullYear()
+  const monthIndex = now.getMonth()
   const todayISO = formatISODate(year, monthIndex, now.getDate())
   // 진단설문 버튼 표시 조건:
   // 1. 오늘 기록이 없으면 표시
@@ -422,18 +531,17 @@ export default function HomePage() {
   const needsSurveyToday = hasSchedule 
     ? scheduledDaySet.has(now.getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6) && (!hasTodayRecord || !hasDiagAnswers)
     : !hasTodayRecord || !hasDiagAnswers
-  const firstDayIndex = new Date(year, monthIndex, 1).getDay()
-  const totalCells = Math.ceil((firstDayIndex + daysInMonth) / 7) * 7
-  const completedSet = new Set(monthlyCare.completedDays)
+  const firstDayIndex = new Date(calYear, calMonthIndex, 1).getDay()
+  const totalCells = Math.ceil((firstDayIndex + calDaysInMonth) / 7) * 7
   const calendarCells = Array.from({ length: totalCells }, (_, index) => {
     const dayNumber = index - firstDayIndex + 1
-    if (dayNumber < 1 || dayNumber > daysInMonth) {
+    if (dayNumber < 1 || dayNumber > calDaysInMonth) {
       return <div key={`empty-${index}`} className="aspect-square min-h-[32px]" />
     }
 
-    const dateISO = formatISODate(year, monthIndex, dayNumber)
-    const isCompleted = completedSet.has(dateISO)
-    const isToday = dateISO === todayISO
+    const dateISO = formatISODate(calYear, calMonthIndex, dayNumber)
+    const isCompleted = calCompletedSet.has(dateISO)
+    const isToday = isCurrentMonth && dateISO === todayISO
     // 스케줄이 있으면 surveyCompletedDays 확인, 없으면 completedSet 확인
     const hasSurveyStamp = hasSchedule ? surveyCompletedDays.has(dayNumber) : isCompleted
     const stampSrc = hasSurveyStamp ? stampImages[getStampIndex(dateISO)] : null
@@ -529,7 +637,26 @@ export default function HomePage() {
                 <Calendar className="w-5 h-5 text-primary" />
                 월간 케어 참여 기록
               </CardTitle>
-              <span className="text-xs text-muted-foreground">{monthLabel}</span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={handlePrevMonth}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-xs text-muted-foreground min-w-[80px] text-center">{monthLabel}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={handleNextMonth}
+                  disabled={!canGoNext}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -546,7 +673,13 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-7 gap-1 px-2">{calendarCells}</div>
+            {isLoadingCalendar ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-7 gap-1 px-2">{calendarCells}</div>
+            )}
           </CardContent>
         </Card>
 
