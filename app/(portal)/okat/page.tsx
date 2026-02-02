@@ -44,6 +44,7 @@ function formatDateTime(value?: string | null) {
 
 type MetricPoint = {
   day: number
+  date: string
   value: number
   label?: string
 }
@@ -269,10 +270,13 @@ export default function OkatDashboardPage() {
           label = `${d.weight}kg`
         }
         
-        return { day: d.day, value, label }
+        // 날짜 포맷: DD일
+        const dateStr = d.date ? `${parseInt(d.date.split('-')[2])}` : `${d.day}`
+        
+        return { day: d.day, date: dateStr, value, label }
       })
     } else {
-      chartData = [{ day: 1, value: 50, label: '기록 없음' }]
+      chartData = [{ day: 1, date: '1일', value: 50, label: '기록 없음' }]
     }
     
     return {
@@ -349,7 +353,7 @@ export default function OkatDashboardPage() {
                         <ChartContainer config={chartConfig} className="h-28 w-full">
                           <LineChart data={metric.chartData} margin={{ left: 0, right: 4, top: 6, bottom: 0 }}>
                             <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                            <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={6} />
+                            <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={6} fontSize={10} />
                             <YAxis hide domain={["dataMin - 4", "dataMax + 4"]} />
                             <Tooltip
                               content={({ active, payload }) => {
@@ -358,7 +362,7 @@ export default function OkatDashboardPage() {
                                 return (
                                   <div className="rounded-md border bg-background px-2 py-1 shadow-sm">
                                     <p className="text-xs font-medium">{metric.label}: {data.label || data.value}</p>
-                                    <p className="text-xs text-muted-foreground">Day {data.day}</p>
+                                    <p className="text-xs text-muted-foreground">{data.date}</p>
                                   </div>
                                 )
                               }}
