@@ -1200,6 +1200,13 @@ export default function CatProfilePage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Cat ID */}
+          {!isNewCatMode && activeCat?.id && (
+            <p className="text-[10px] text-muted-foreground/50 text-center select-all">
+              ID: {activeCat.id}
+            </p>
+          )}
         </div>
       </main>
 
