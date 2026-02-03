@@ -124,15 +124,15 @@ export default function WebcamPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="px-6 pt-6 pb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Camera className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold">펫캠 모니터링</h1>
+      <header className="px-4 sm:px-6 pt-6 pb-4">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <Camera className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
+            <h1 className="text-xl sm:text-2xl font-bold whitespace-nowrap">펫캠 모니터링</h1>
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6"
+              className="h-6 w-6 flex-shrink-0"
               onClick={() => setFgsHelpOpen(true)}
             >
               <HelpCircle className="h-5 w-5 text-muted-foreground" />
@@ -144,17 +144,20 @@ export default function WebcamPage() {
               size="sm"
               onClick={loadImages}
               disabled={loading}
+              className="flex-1 sm:flex-none"
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-              새로고침
+              <RefreshCw className={`h-4 w-4 mr-1 sm:mr-2 ${loading ? "animate-spin" : ""}`} />
+              <span className="hidden xs:inline">새로고침</span>
+              <span className="xs:hidden">새로</span>
             </Button>
             <Button
               size="sm"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
+              className="flex-1 sm:flex-none"
             >
-              <Upload className={`h-4 w-4 mr-2 ${uploading ? "animate-pulse" : ""}`} />
-              {uploading ? "업로드 중..." : "사진 업로드"}
+              <Upload className={`h-4 w-4 mr-1 sm:mr-2 ${uploading ? "animate-pulse" : ""}`} />
+              {uploading ? "업로드 중..." : <><span className="hidden xs:inline">사진 업로드</span><span className="xs:hidden">업로드</span></>}
             </Button>
           </div>
           <input
@@ -166,7 +169,7 @@ export default function WebcamPage() {
           />
         </div>
         {activeCat && (
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-2 text-sm sm:text-base">
             {activeCat.name}의 펫캠 사진
           </p>
         )}
