@@ -87,6 +87,7 @@ export interface AdminCareLog {
   date: string
   type: string
   answers?: any
+  diagQuestions?: any[]
   diagAnswers?: any
   createdAt: string
   pet: {
@@ -147,6 +148,45 @@ export async function getCareLogsByPet(petId: string): Promise<AdminCareLog[]> {
     return Array.isArray(data) ? data : []
   } catch (error) {
     console.error("고양이별 케어 로그 조회 실패:", error)
+    return []
+  }
+}
+
+/**
+ * 고양이 삭제 (Admin)
+ */
+export async function deletePet(petId: string): Promise<boolean> {
+  try {
+    const result = await fetchWithoutAuth<{ deleted: boolean }>(`/admin/pets/${petId}`, {
+      method: "DELETE",
+    })
+    return result?.deleted ?? false
+  } catch (error) {
+    console.error("고양이 삭제 실패:", error)
+    return false
+  }
+}
+
+export interface AdminPetcamImage {
+  key: string
+  url: string
+  lastModified: string
+  size: number
+  fgsScore?: number
+  fgsExplanation?: string
+  petId: string
+  petName: string
+}
+
+/**
+ * 전체 펫캠 이미지 조회 (Admin)
+ */
+export async function getAllPetcamImages(): Promise<AdminPetcamImage[]> {
+  try {
+    const data = await fetchWithoutAuth<AdminPetcamImage[]>("/admin/pets/petcam-images")
+    return Array.isArray(data) ? data : []
+  } catch (error) {
+    console.error("펫캠 이미지 조회 실패:", error)
     return []
   }
 }

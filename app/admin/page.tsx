@@ -33,22 +33,134 @@ import {
 import {
   getAllPets,
   getCareLogsByPet,
+  deletePet,
+  getAllPetcamImages,
   type AdminPet,
   type AdminCareLog,
+  type AdminPetcamImage,
 } from "@/lib/backend-admin"
-import { Building2, Stethoscope, Hospital, Plus, Pencil, Trash2, Cat, ClipboardList } from "lucide-react"
+import { Building2, Stethoscope, Hospital, Plus, Pencil, Trash2, Cat, ClipboardList, Camera } from "lucide-react"
+
+// 질문 key를 한글로 매핑
+const QUESTION_LABELS: Record<string, string> = {
+  q1_food_intake: "식사량",
+  q2_water_intake: "음수량",
+  q3_weight: "체중 (kg)",
+  q4_poop: "배변 상태",
+  q5_urine: "배뇨량",
+  q6_custom: "맞춤 질문",
+  // 기존 질문들
+  q1_urinary_male: "배뇨 상태 (수컷)",
+  q1_urinary_general: "화장실 패턴",
+  q2_water_senior: "음수량 변화 (시니어)",
+  q2_water_general: "음수량",
+  q3_vomiting: "구토 빈도",
+  q4_mobility_senior: "움직임 (시니어)",
+  q4_activity_general: "활동량",
+  q5_appetite: "식욕 변화",
+}
+
+// 질문 전체 텍스트 매핑
+const QUESTION_TEXTS: Record<string, string> = {
+  q1_food_intake: "오늘 식사량은 어땠나요?",
+  q2_water_intake: "오늘 물은 얼마나 마셨나요?",
+  q3_weight: "오늘 체중을 입력해주세요 (kg)",
+  q4_poop: "오늘 배변 상태는 어땠나요?",
+  q5_urine: "오늘 배뇨량은 어땠나요?",
+  q6_custom: "맞춤 질문",
+  // 기존 질문들
+  q1_urinary_male: "화장실에서 소변 볼 때 평소보다 오래 앉아 있거나 힘들어하는 것 같나요?",
+  q1_urinary_general: "최근 화장실 사용 횟수나 패턴에 변화가 있었나요?",
+  q2_water_senior: "물을 마시는 양이 예전보다 늘었다고 느끼시나요?",
+  q2_water_general: "하루에 물을 얼마나 마시는 것 같나요?",
+  q3_vomiting: "최근 2주 동안 구토한 적이 있나요?",
+  q4_mobility_senior: "높은 곳으로 뛰어오르거나 계단 오르는 걸 피하는 것 같나요?",
+  q4_activity_general: "평소 활동량은 어떤 편인가요?",
+  q5_appetite: "최근 식욕에 변화가 있었나요?",
+  // followUp 질문들
+  fu_flutd_1: "배뇨 시 울음소리를 내거나 불편해 보이나요?",
+  fu_flutd_2: "소변 색이 진하거나 피가 섞인 것 같나요?",
+  fu_flutd_3: "화장실에 자주 가는데 소변량이 적은 것 같나요?",
+  fu_ckd_1: "물 섭취량이 눈에 띄게 증가했나요?",
+  fu_ckd_2: "배뇨 횟수나 소변량이 증가했나요?",
+  fu_ckd_3: "체중이 감소한 것 같나요?",
+  fu_gi_1: "최근 2주 내 구토가 주 1회 이상 있었나요?",
+  fu_gi_2: "묽은 변의 빈도는 어떤가요?",
+  fu_gi_3: "식욕이 감소했나요?",
+  fu_pain_1: "점프나 계단을 피하는 것 같나요?",
+  fu_pain_2: "그루밍이 줄었거나 만지면 싫어하나요?",
+  fu_pain_3: "숨는 시간이 늘었나요?",
+}
+
+// 답변 value를 한글로 매핑
+const ANSWER_LABELS: Record<string, string> = {
+  // 식사량
+  none: "안 먹음",
+  less: "평소보다 적게",
+  normal: "평소만큼",
+  more: "평소보다 많이",
+  // 배변
+  diarrhea: "설사",
+  // 기존 답변들
+  never: "전혀 없어요",
+  rarely: "가끔 그래요",
+  often: "자주 그래요",
+  unknown: "잘 모르겠어요",
+  same: "똑같아요",
+  little_more: "조금 늘었어요",
+  much_more: "많이 늘었어요",
+  little: "적게 마셔요",
+  much: "많이 마셔요",
+  once: "1-2번",
+  weekly: "주 1회 이상",
+  daily: "거의 매일",
+  no: "아니요",
+  yes: "예",
+  sometimes: "가끔 주저해요",
+  active: "활발해요",
+  lazy: "조용한 편이에요",
+  decreased: "최근 줄었어요",
+  increased: "더 먹어요",
+  picky: "까다로워졌어요",
+  slight: "약간",
+  clear: "뚜렷함",
+}
+
+// 답변 값에 따른 색상
+const getAnswerColor = (key: string, value: string): string => {
+  // 체중은 숫자이므로 기본 색상
+  if (key === "q3_weight") return "text-foreground"
+  
+  // 정상/평소 수준
+  if (value === "normal" || value === "same") return "text-green-600"
+  
+  // 위험 신호
+  if (value === "none" || value === "diarrhea" || value === "daily" || 
+      value === "much_more" || value === "clear") return "text-red-600"
+  
+  // 주의 필요
+  if (value === "less" || value === "more" || value === "often" || 
+      value === "weekly" || value === "decreased" || value === "slight") return "text-amber-600"
+  
+  return "text-foreground"
+}
 
 export default function AdminPage() {
   const [providers, setProviders] = useState<MedicalProvider[]>([])
   const [pets, setPets] = useState<AdminPet[]>([])
   const [petCareLogs, setPetCareLogs] = useState<AdminCareLog[]>([])
+  const [petcamImages, setPetcamImages] = useState<AdminPetcamImage[]>([])
   const [loading, setLoading] = useState(true)
+  const [petcamLoading, setPetcamLoading] = useState(false)
   const [careLogsLoading, setCareLogsLoading] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [petDetailOpen, setPetDetailOpen] = useState(false)
   const [careLogDetailOpen, setCareLogDetailOpen] = useState(false)
+  const [petcamDetailOpen, setPetcamDetailOpen] = useState(false)
   const [selectedPet, setSelectedPet] = useState<AdminPet | null>(null)
   const [selectedCareLog, setSelectedCareLog] = useState<AdminCareLog | null>(null)
+  const [selectedPetcamImage, setSelectedPetcamImage] = useState<AdminPetcamImage | null>(null)
+  const [petcamFilterPetId, setPetcamFilterPetId] = useState<string>("all")
   const [editingProvider, setEditingProvider] = useState<MedicalProvider | null>(null)
   const [formData, setFormData] = useState<CreateMedicalProviderData>({
     type: "hospital",
@@ -80,6 +192,13 @@ export default function AdminPage() {
   const loadPets = async () => {
     const data = await getAllPets()
     setPets(data)
+  }
+
+  const loadPetcamImages = async () => {
+    setPetcamLoading(true)
+    const data = await getAllPetcamImages()
+    setPetcamImages(data)
+    setPetcamLoading(false)
   }
 
   const loadPetCareLogs = async (petId: string) => {
@@ -140,6 +259,18 @@ export default function AdminPage() {
     setCareLogDetailOpen(true)
   }
 
+  const handleDeletePet = async (e: React.MouseEvent, petId: string, petName: string) => {
+    e.stopPropagation()
+    if (confirm(`정말 "${petName}"을(를) 삭제하시겠습니까?`)) {
+      const success = await deletePet(petId)
+      if (success) {
+        await loadPets()
+        setPetDetailOpen(false)
+        setSelectedPet(null)
+      }
+    }
+  }
+
   const resetForm = () => {
     setFormData({
       type: "hospital",
@@ -188,13 +319,14 @@ export default function AdminPage() {
       </header>
 
       <main className="px-6 py-6">
-        <Tabs defaultValue="providers" className="w-full">
+        <Tabs defaultValue="pets" className="w-full">
+          {/* 탭 선택 버튼 */}
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="providers">기관/의사</TabsTrigger>
             <TabsTrigger value="pets">고양이</TabsTrigger>
+            <TabsTrigger value="petcam" onClick={() => petcamImages.length === 0 && loadPetcamImages()}>펫캠 모니터링</TabsTrigger>
           </TabsList>
 
-          {/* 기관/의사 탭 */}
+          {/* 기관/의사 탭 비활성화
           <TabsContent value="providers" className="space-y-4">
             <div className="flex justify-end">
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -362,6 +494,7 @@ export default function AdminPage() {
               </div>
             )}
           </TabsContent>
+          */}
 
           {/* 고양이 탭 */}
           <TabsContent value="pets" className="space-y-4">
@@ -382,24 +515,33 @@ export default function AdminPage() {
                     onClick={() => handlePetClick(pet)}
                   >
                     <CardHeader className="pb-3">
-                      <div className="flex items-center gap-3">
-                        {pet.profilePhoto ? (
-                          <img 
-                            src={pet.profilePhoto} 
-                            alt={pet.name}
-                            className="w-12 h-12 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Cat className="w-6 h-6" />
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          {pet.profilePhoto ? (
+                            <img 
+                              src={pet.profilePhoto} 
+                              alt={pet.name}
+                              className="w-12 h-12 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                              <Cat className="w-6 h-6" />
+                            </div>
+                          )}
+                          <div>
+                            <CardTitle className="text-lg">{pet.name}</CardTitle>
+                            <p className="text-sm text-muted-foreground">
+                              {pet.user.name || pet.user.email}
+                            </p>
                           </div>
-                        )}
-                        <div>
-                          <CardTitle className="text-lg">{pet.name}</CardTitle>
-                          <p className="text-sm text-muted-foreground">
-                            {pet.user.name || pet.user.email}
-                          </p>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => handleDeletePet(e, pet.id, pet.name)}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-2">
@@ -426,10 +568,24 @@ export default function AdminPage() {
             <Dialog open={petDetailOpen} onOpenChange={setPetDetailOpen}>
               <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>고양이 상세 정보</DialogTitle>
-                  <DialogDescription>
-                    고양이의 상세 정보와 보호자 정보를 확인할 수 있습니다.
-                  </DialogDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <DialogTitle>고양이 상세 정보</DialogTitle>
+                      <DialogDescription>
+                        고양이의 상세 정보와 보호자 정보를 확인할 수 있습니다.
+                      </DialogDescription>
+                    </div>
+                    {selectedPet && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={(e) => handleDeletePet(e, selectedPet.id, selectedPet.name)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        삭제
+                      </Button>
+                    )}
+                  </div>
                 </DialogHeader>
                 {selectedPet && (
                   <div className="space-y-6">
@@ -778,15 +934,25 @@ export default function AdminPage() {
                     {selectedCareLog.answers && (
                       <div className="space-y-3">
                         <h3 className="font-semibold text-lg border-b pb-2">기본 체크인 답변</h3>
-                        <div className="space-y-2">
-                          {Object.entries(selectedCareLog.answers).map(([key, value]) => (
-                            <div key={key} className="flex justify-between items-center p-2 bg-muted rounded">
-                              <span className="text-sm font-medium">{key}</span>
-                              <span className="text-sm text-muted-foreground">
-                                {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                              </span>
-                            </div>
-                          ))}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {Object.entries(selectedCareLog.answers).map(([key, value]) => {
+                            const label = QUESTION_LABELS[key] || key
+                            const displayValue = typeof value === 'string' 
+                              ? (ANSWER_LABELS[value] || value)
+                              : typeof value === 'number'
+                                ? value.toString()
+                                : JSON.stringify(value)
+                            const colorClass = typeof value === 'string' 
+                              ? getAnswerColor(key, value) 
+                              : "text-foreground"
+                            
+                            return (
+                              <div key={key} className="p-3 bg-muted rounded-lg">
+                                <p className="text-xs text-muted-foreground mb-1">{label}</p>
+                                <p className={`font-medium ${colorClass}`}>{displayValue}</p>
+                              </div>
+                            )
+                          })}
                         </div>
                       </div>
                     )}
@@ -795,15 +961,43 @@ export default function AdminPage() {
                     {selectedCareLog.diagAnswers && (
                       <div className="space-y-3">
                         <h3 className="font-semibold text-lg border-b pb-2">진단 설문 답변</h3>
-                        <div className="space-y-2">
-                          {Object.entries(selectedCareLog.diagAnswers).map(([key, value]) => (
-                            <div key={key} className="flex justify-between items-center p-2 bg-muted rounded">
-                              <span className="text-sm font-medium">{key}</span>
-                              <span className="text-sm text-muted-foreground">
-                                {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                              </span>
-                            </div>
-                          ))}
+                        <div className="space-y-3">
+                          {Object.entries(selectedCareLog.diagAnswers).map(([key, value]) => {
+                            // diagQuestions에서 해당 질문 찾기
+                            const question = Array.isArray(selectedCareLog.diagQuestions) 
+                              ? selectedCareLog.diagQuestions.find((q: any) => q.id === key)
+                              : null
+                            
+                            const label = question?.text || QUESTION_LABELS[key] || key
+                            const questionText = question?.description || QUESTION_TEXTS[key] || ""
+                            
+                            // 선택된 옵션의 label 찾기
+                            let displayValue: string
+                            if (question?.options && typeof value === 'string') {
+                              const selectedOption = question.options.find((opt: any) => opt.value === value)
+                              displayValue = selectedOption?.label || ANSWER_LABELS[value] || value
+                            } else if (typeof value === 'string') {
+                              displayValue = ANSWER_LABELS[value] || value
+                            } else if (typeof value === 'number') {
+                              displayValue = value.toString()
+                            } else {
+                              displayValue = JSON.stringify(value)
+                            }
+                            
+                            const colorClass = typeof value === 'string' 
+                              ? getAnswerColor(key, value) 
+                              : "text-foreground"
+                            
+                            return (
+                              <div key={key} className="p-4 bg-muted rounded-lg">
+                                <p className="text-sm font-medium text-foreground mb-1">{label}</p>
+                                {questionText && (
+                                  <p className="text-xs text-muted-foreground mb-2">{questionText}</p>
+                                )}
+                                <p className={`font-semibold text-lg ${colorClass}`}>{displayValue}</p>
+                              </div>
+                            )
+                          })}
                         </div>
                       </div>
                     )}
@@ -814,6 +1008,156 @@ export default function AdminPage() {
                       <pre className="text-xs bg-muted p-3 rounded overflow-hidden whitespace-pre-wrap break-all">
                         {JSON.stringify(selectedCareLog, null, 2)}
                       </pre>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+          </TabsContent>
+
+          {/* 펫캠 모니터링 탭 */}
+          <TabsContent value="petcam" className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+              <div className="flex items-center gap-3">
+                <Select value={petcamFilterPetId} onValueChange={setPetcamFilterPetId}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="고양이 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">전체 고양이</SelectItem>
+                    {/* 펫캠 이미지에서 고유한 고양이 목록 추출 */}
+                    {Array.from(new Map(petcamImages.map(img => [img.petId, img.petName])))
+                      .filter(([petId]) => petId)
+                      .map(([petId, petName]) => (
+                        <SelectItem key={petId} value={petId}>{petName}</SelectItem>
+                      ))
+                    }
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  {petcamFilterPetId === "all" 
+                    ? `총 ${petcamImages.length}개` 
+                    : `${petcamImages.filter(img => img.petId === petcamFilterPetId).length}개`
+                  }
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={loadPetcamImages} disabled={petcamLoading}>
+                {petcamLoading ? "로딩 중..." : "새로고침"}
+              </Button>
+            </div>
+
+            {petcamLoading ? (
+              <div className="text-center py-12 text-muted-foreground">로딩 중...</div>
+            ) : petcamImages.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  펫캠 이미지가 없습니다.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {petcamImages
+                  .filter(image => petcamFilterPetId === "all" || image.petId === petcamFilterPetId)
+                  .map((image) => (
+                  <Card 
+                    key={image.key} 
+                    className="cursor-pointer hover:ring-2 hover:ring-primary transition-all overflow-hidden"
+                    onClick={() => {
+                      setSelectedPetcamImage(image)
+                      setPetcamDetailOpen(true)
+                    }}
+                  >
+                    <div className="aspect-square relative">
+                      <img 
+                        src={image.url} 
+                        alt={image.petName}
+                        className="w-full h-full object-cover"
+                      />
+                      {image.fgsScore !== undefined && (
+                        <div className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold ${
+                          image.fgsScore <= 2 ? 'bg-green-500 text-white' :
+                          image.fgsScore <= 4 ? 'bg-amber-500 text-white' :
+                          'bg-red-500 text-white'
+                        }`}>
+                          FGS {image.fgsScore}
+                        </div>
+                      )}
+                    </div>
+                    <CardContent className="p-3">
+                      <p className="font-medium text-sm truncate">{image.petName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(image.lastModified).toLocaleString("ko-KR")}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* 펫캠 이미지 상세 Dialog */}
+            <Dialog open={petcamDetailOpen} onOpenChange={setPetcamDetailOpen}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>펫캠 이미지 상세</DialogTitle>
+                  <DialogDescription>
+                    {selectedPetcamImage?.petName}의 펫캠 이미지입니다.
+                  </DialogDescription>
+                </DialogHeader>
+                {selectedPetcamImage && (
+                  <div className="space-y-4">
+                    <div className="aspect-video relative rounded-lg overflow-hidden bg-muted">
+                      <img 
+                        src={selectedPetcamImage.url} 
+                        alt={selectedPetcamImage.petName}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 bg-muted rounded-lg">
+                        <p className="text-xs text-muted-foreground">고양이</p>
+                        <p className="font-medium">{selectedPetcamImage.petName}</p>
+                      </div>
+                      <div className="p-3 bg-muted rounded-lg">
+                        <p className="text-xs text-muted-foreground">촬영 시간</p>
+                        <p className="font-medium">
+                          {new Date(selectedPetcamImage.lastModified).toLocaleString("ko-KR")}
+                        </p>
+                      </div>
+                      {selectedPetcamImage.fgsScore !== undefined && (
+                        <>
+                          <div className="p-3 bg-muted rounded-lg">
+                            <p className="text-xs text-muted-foreground">FGS 점수</p>
+                            <p className={`font-bold text-lg ${
+                              selectedPetcamImage.fgsScore <= 2 ? 'text-green-600' :
+                              selectedPetcamImage.fgsScore <= 4 ? 'text-amber-600' :
+                              'text-red-600'
+                            }`}>
+                              {selectedPetcamImage.fgsScore}점
+                            </p>
+                          </div>
+                          <div className="p-3 bg-muted rounded-lg">
+                            <p className="text-xs text-muted-foreground">상태</p>
+                            <p className="font-medium">
+                              {selectedPetcamImage.fgsScore <= 2 ? '😊 편안함' :
+                               selectedPetcamImage.fgsScore <= 4 ? '😐 보통' :
+                               '😣 불편함'}
+                            </p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {selectedPetcamImage.fgsExplanation && (
+                      <div className="p-4 bg-muted rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-2">AI 분석 결과</p>
+                        <p className="text-sm">{selectedPetcamImage.fgsExplanation}</p>
+                      </div>
+                    )}
+
+                    <div className="p-3 bg-muted rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-1">파일 경로</p>
+                      <p className="text-xs font-mono break-all">{selectedPetcamImage.key}</p>
                     </div>
                   </div>
                 )}
