@@ -515,33 +515,24 @@ export default function AdminPage() {
                     onClick={() => handlePetClick(pet)}
                   >
                     <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          {pet.profilePhoto ? (
-                            <img 
-                              src={pet.profilePhoto} 
-                              alt={pet.name}
-                              className="w-12 h-12 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                              <Cat className="w-6 h-6" />
-                            </div>
-                          )}
-                          <div>
-                            <CardTitle className="text-lg">{pet.name}</CardTitle>
-                            <p className="text-sm text-muted-foreground">
-                              {pet.user.name || pet.user.email}
-                            </p>
+                      <div className="flex items-center gap-3">
+                        {pet.profilePhoto ? (
+                          <img 
+                            src={pet.profilePhoto} 
+                            alt={pet.name}
+                            className="w-12 h-12 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Cat className="w-6 h-6" />
                           </div>
+                        )}
+                        <div>
+                          <CardTitle className="text-lg">{pet.name}</CardTitle>
+                          <p className="text-sm text-muted-foreground">
+                            {pet.user.name || pet.user.email}
+                          </p>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => handleDeletePet(e, pet.id, pet.name)}
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-2">
@@ -568,24 +559,10 @@ export default function AdminPage() {
             <Dialog open={petDetailOpen} onOpenChange={setPetDetailOpen}>
               <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <DialogTitle>고양이 상세 정보</DialogTitle>
-                      <DialogDescription>
-                        고양이의 상세 정보와 보호자 정보를 확인할 수 있습니다.
-                      </DialogDescription>
-                    </div>
-                    {selectedPet && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={(e) => handleDeletePet(e, selectedPet.id, selectedPet.name)}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        삭제
-                      </Button>
-                    )}
-                  </div>
+                  <DialogTitle>고양이 상세 정보</DialogTitle>
+                  <DialogDescription>
+                    고양이의 상세 정보와 보호자 정보를 확인할 수 있습니다.
+                  </DialogDescription>
                 </DialogHeader>
                 {selectedPet && (
                   <div className="space-y-6">
@@ -890,6 +867,18 @@ export default function AdminPage() {
                       <pre className="text-xs bg-muted p-3 rounded overflow-hidden whitespace-pre-wrap break-all">
                         {JSON.stringify(selectedPet, null, 2)}
                       </pre>
+                    </div>
+
+                    {/* 삭제 버튼 */}
+                    <div className="pt-4 border-t">
+                      <Button
+                        variant="destructive"
+                        className="w-full"
+                        onClick={(e) => handleDeletePet(e, selectedPet.id, selectedPet.name)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        이 고양이 삭제
+                      </Button>
                     </div>
                   </div>
                 )}
