@@ -1,1 +1,1 @@
-2026-01-08 수시로 업데이트중
+Frontend for AI-based cat health monitoring system (Next.js + TypeScript).
