@@ -25,3 +25,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# tsc output logs
+tsc_output*.txt
+
+# docker
+Dockerfile
+
+# CI/CD
+jenkins/
+
+# editor
+.vscode/
+.kiro/
