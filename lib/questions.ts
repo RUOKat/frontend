@@ -1,38 +1,23 @@
 import type { CatProfile, Question } from "./types"
 // import { normalizeMedicalHistory } from "./medical-history"  // 주석: 기존 로직에서 사용
-import { fetchQuestions, fetchQuestionsForPet, type QuestionsData } from "./backend-care"
 
-// type FollowUpCategory = "FLUTD" | "CKD" | "GI" | "PAIN"  // 주석: 기존 followUp 카테고리
-
-let questionBank: QuestionsData | null = null
-
-async function loadQuestions(): Promise<QuestionsData> {
-  if (questionBank) {
-    return questionBank
-  }
-
-  try {
-    questionBank = await fetchQuestions()
-    return questionBank
-  } catch (error) {
-    console.error('Failed to load questions from backend:', error)
-    // Fallback to empty data if backend fails
-    return {
-      onboarding: {},
-      followUp: {}
-    }
-  }
+// 백엔드 질문 기능 비활성화로 인한 더미 데이터
+export interface QuestionsData {
+  onboarding: Record<string, Question>;
+  followUp: Record<string, Question[]>;
 }
 
-// petId별 맞춤 질문 로드 (DynamoDB question_bank 포함)
+const STATIC_QUESTIONS: QuestionsData = {
+  onboarding: {},
+  followUp: {}
+}
+
+async function loadQuestions(): Promise<QuestionsData> {
+  return STATIC_QUESTIONS
+}
+
 async function loadQuestionsForPet(petId: string): Promise<QuestionsData> {
-  try {
-    return await fetchQuestionsForPet(petId)
-  } catch (error) {
-    console.error('Failed to load questions for pet from backend:', error)
-    // Fallback to basic questions
-    return loadQuestions()
-  }
+  return STATIC_QUESTIONS
 }
 
 function getOnboardingQuestion(id: string, questions: QuestionsData): Question | undefined {
@@ -41,39 +26,110 @@ function getOnboardingQuestion(id: string, questions: QuestionsData): Question |
 
 // 데일리 기록 질문 5개 + 맞춤 질문 1개 (고정)
 export async function generateOnboardingQuestions(catProfile: CatProfile): Promise<Question[]> {
-  // petId가 있으면 맞춤 질문 포함 API 호출
-  const questionsData = catProfile.id
-    ? await loadQuestionsForPet(catProfile.id)
-    : await loadQuestions()
-
   const questions: Question[] = []
 
-  // Validate questionsData structure
-  if (!questionsData || !questionsData.onboarding) {
-    console.error('Invalid questions data structure:', questionsData)
-    return []
-  }
 
   // 고정된 5개 질문 순서대로 추가
   const questionIds = [
     "q1_food_intake",   // 식사량
     "q2_water_intake",  // 음수량
+    "q5_urine",         // 소변량
+    "q4_poop",          // 대변량
     "q3_weight",        // 체중
-    "q4_poop",          // 배변량
-    "q5_urine"          // 배뇨량
+    "q6_abnormal_signs",// 기타 이상 징후
+    "q7_photo",         // 사진 업로드
   ]
 
+  const HARDCODED_QUESTIONS: Record<string, Question> = {
+    "q1_food_intake": {
+      id: "q1_food_intake",
+      text: "오늘 식사량은 어땠나요?",
+      description: "평소 하루 권장량을 기준으로 얼마나 먹었는지 알려주세요.",
+      type: "single",
+      options: [
+        { value: "none", label: "전혀 안 먹음" },
+        { value: "less", label: "평소보다 적게" },
+        { value: "normal", label: "평소만큼" },
+        { value: "more", label: "평소보다 많이" }
+      ]
+    },
+    "q2_water_intake": {
+      id: "q2_water_intake",
+      text: "오늘 음수량은 어땠나요?",
+      description: "습식 사료를 포함하여 섭취한 수분의 양을 체크해주세요.",
+      type: "single",
+      options: [
+        { value: "none", label: "전혀 안 마심" },
+        { value: "less", label: "평소보다 적게" },
+        { value: "normal", label: "평소만큼" },
+        { value: "more", label: "평소보다 많이" }
+      ]
+    },
+    "q5_urine": {
+      id: "q5_urine",
+      text: "오늘 소변량은 어땠나요?",
+      description: "화장실의 감자 개수나 상태 등을 비교해서 알려주세요.",
+      type: "single",
+      options: [
+        { value: "none", label: "소변을 안 봄" },
+        { value: "less", label: "평소보다 적게" },
+        { value: "normal", label: "평소만큼" },
+        { value: "more", label: "평소보다 많이" }
+      ]
+    },
+    "q4_poop": {
+      id: "q4_poop",
+      text: "오늘 대변량은 어땠나요?",
+      description: "화장실의 맛동산 개수나 상태 등을 종합적으로 알려주세요.",
+      type: "single",
+      options: [
+        { value: "none", label: "대변을 안 봄" },
+        { value: "less", label: "평소보다 적게" },
+        { value: "normal", label: "평소만큼" },
+        { value: "more", label: "평소보다 많이" }
+      ]
+    },
+    "q6_abnormal_signs": {
+      id: "q6_abnormal_signs",
+      text: "기타 이상 징후가 있었나요?",
+      description: "평소와 다른 증상이 있었다면 선택해주세요. (기타 선택 시 직접 입력)",
+      type: "single",
+      options: [
+        { value: "none", label: "해당 없음" },
+        { value: "vomit", label: "구토" },
+        { value: "diarrhea", label: "설사" },
+        { value: "lethargy", label: "활력 저하 및 은둔" },
+        { value: "urination_mistake", label: "대소변 실수" },
+        { value: "drooling", label: "침 흘림" },
+        { value: "other", label: "기타 (직접 입력)" }
+      ]
+    },
+    "q3_weight": {
+      id: "q3_weight",
+      text: "오늘 체중은 얼마인가요?",
+      description: "소수점 자리까지 입력할 수 있습니다. (kg 단위)",
+      type: "number",
+      options: [],
+      validation: {
+        min: 0,
+        max: 30,
+        step: 0.1
+      }
+    },
+    "q7_photo": {
+      id: "q7_photo",
+      text: "우리 집 막둥이 사진도 자랑해주실래요?",
+      description: "오늘의 고양이를 기록으로 남겨보세요. (선택 사항)",
+      type: "photo",
+      options: []
+    }
+  };
+
   for (const id of questionIds) {
-    const question = getOnboardingQuestion(id, questionsData)
+    const question = HARDCODED_QUESTIONS[id]
     if (question) {
       questions.push(question)
     }
-  }
-
-  // 6번째 맞춤 질문 추가 (DynamoDB에서 가져온 경우)
-  const customQuestion = getOnboardingQuestion("q6_custom", questionsData)
-  if (customQuestion) {
-    questions.push(customQuestion)
   }
 
   return questions
@@ -81,13 +137,7 @@ export async function generateOnboardingQuestions(catProfile: CatProfile): Promi
 
 // followUp 질문은 현재 사용하지 않음
 export async function getFollowUpQuestions(category: string): Promise<Question[]> {
-  const questionsData = await loadQuestions()
-
-  // Validate questionsData structure
-  if (!questionsData || !questionsData.followUp) {
-    console.error('Invalid questions data structure for followUp:', questionsData)
-    return []
-  }
+  const questionsData = STATIC_QUESTIONS
 
   return questionsData.followUp[category] || []
 }

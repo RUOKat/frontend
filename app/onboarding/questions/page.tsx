@@ -13,8 +13,9 @@ import { generateOnboardingQuestions } from "@/lib/questions"
 // import { computeRiskStatus } from "@/lib/risk"  // 비활성화
 import { getTodayISO, updateMonthlyCare } from "@/lib/care-monthly"
 import type { Question, OnboardingAnswers } from "@/lib/types"
-import { MessageCircle, ArrowRight, ArrowLeft, HelpCircle } from "lucide-react"
+import { MessageCircle, ArrowRight, ArrowLeft, HelpCircle, Camera, X } from "lucide-react"
 import { submitCheckIn } from "@/lib/backend-care"
+import { createPost, uploadImage } from "@/lib/backend-posts"
 
 export default function QuestionsPage() {
   const router = useRouter()
@@ -25,7 +26,19 @@ export default function QuestionsPage() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<OnboardingAnswers>({})
+  const [customText, setCustomText] = useState("")
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [mediaFile, setMediaFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    // Cleanup blob URLs on unmount
+    return () => {
+      if (photoPreview && photoPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(photoPreview)
+      }
+    }
+  }, [photoPreview])
 
   useEffect(() => {
     if (activeCat) {
@@ -38,18 +51,73 @@ export default function QuestionsPage() {
   const currentQuestion = questions[currentIndex]
   const progress = ((currentIndex + 1) / questions.length) * 100
   const isLastQuestion = currentIndex === questions.length - 1
-  const hasCurrentAnswer = currentQuestion && answers[currentQuestion.id]
+  const isMediaQuestion = currentQuestion?.type === "photo"
+  const hasCurrentAnswer = currentQuestion && (answers[currentQuestion.id] || isMediaQuestion)
 
   const handleAnswer = (value: string) => {
     if (!currentQuestion) return
+    
+    // 이전에 입력했던 "other:" 형태에서 값 복원
+    if (value === "other" && answers[currentQuestion.id]?.startsWith("other:")) {
+      setCustomText(answers[currentQuestion.id].replace("other:", ""))
+    } else if (value !== "other") {
+      setCustomText("")
+    }
+
     setAnswers((prev) => ({
       ...prev,
       [currentQuestion.id]: value,
     }))
   }
 
+  const handleCustomTextChange = (text: string) => {
+    if (!currentQuestion) return
+    setCustomText(text)
+    
+    // text가 있을 때만 "other:내용" 형태로 저장, 아니면 그냥 "other" 유지 (이후 handleNext에서 validate 할 수 있게)
+    setAnswers((prev) => ({
+      ...prev,
+      [currentQuestion.id]: text.trim() ? `other:${text}` : "other",
+    }))
+  }
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !currentQuestion) return
+
+    // Cleanup old preview
+    if (photoPreview && photoPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(photoPreview)
+    }
+
+    const previewUrl = URL.createObjectURL(file)
+    setPhotoPreview(previewUrl)
+    setMediaFile(file)
+    
+    // answers에는 파일이 있음을 표시하기 위한 더미값 저장 (실제 업로드는 handleComplete에서)
+    setAnswers((prev) => ({
+      ...prev,
+      [currentQuestion.id]: "media_selected",
+    }))
+  }
+
+  const removePhoto = () => {
+    if (!currentQuestion) return
+    if (photoPreview && photoPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(photoPreview)
+    }
+    setPhotoPreview(null)
+    setMediaFile(null)
+    setAnswers((prev) => {
+      const newAnswers = { ...prev }
+      delete newAnswers[currentQuestion.id]
+      return newAnswers
+    })
+  }
+
   const handleNext = () => {
     if (!hasCurrentAnswer) return
+    if (answers[currentQuestion.id] === "other" && !customText.trim()) return // 기타 선택 시 내용 필수 입력 방어
 
     if (isLastQuestion) {
       handleComplete()
@@ -74,12 +142,29 @@ export default function QuestionsPage() {
       setOnboardingAnswers(answers)
 
       // 2. 백엔드에 체크인 기록 저장 (questions + answers)
-      await submitCheckIn(activeCatId, questions, answers)
+      // 💡 [수정] 용량이 큰 사진은 저장용 API에는 보내지 않음 (post 생성에서 별도 처리)
+      const answersForBackend = { ...answers };
+      delete answersForBackend['q7_photo'];
+      await submitCheckIn(activeCatId, questions, answersForBackend);
 
       // 3. 월간 케어 기록 업데이트
       updateMonthlyCare(getTodayISO(), activeCatId ?? undefined)
 
-      // 4. 홈으로 이동 (evaluateSuspicion 비활성화)
+      // 4. 미디어가 있으면 업로드 후 커뮤니티 게시물 자동 생성
+      if (mediaFile && activeCatId) {
+        try {
+          // backend-posts.ts의 uploadImage 사용 (FormData 기반)
+          const uploadedUrl = await uploadImage(mediaFile)
+          if (uploadedUrl) {
+            await createPost(activeCatId, uploadedUrl, "오늘의 기록 완료! 🐱")
+          }
+        } catch (postError) {
+          console.error('Failed to create community post:', postError)
+          // 게시물 생성 실패해도 설문 완료는 유지
+        }
+      }
+
+      // 5. 홈으로 이동 (evaluateSuspicion 비활성화)
       router.push("/")
 
       /* evaluateSuspicion 로직 비활성화
@@ -180,26 +265,97 @@ export default function QuestionsPage() {
                     </p>
                   )}
                 </div>
+              ) : currentQuestion.type === "photo" ? (
+                // 사진 업로드
+                <div className="space-y-4">
+                  {photoPreview ? (
+                    <div className="relative aspect-square w-full rounded-2xl overflow-hidden border-2 border-primary/20 bg-black">
+                      {mediaFile?.type.startsWith('video/') ? (
+                        <video
+                          src={photoPreview}
+                          className="w-full h-full object-contain"
+                          autoPlay
+                          muted
+                          loop
+                          playsInline
+                        />
+                      ) : (
+                        <img
+                          src={photoPreview}
+                          alt="오늘의 고양이"
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={removePhoto}
+                        className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 flex items-center justify-center text-white backdrop-blur-sm"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center aspect-square w-full rounded-2xl border-2 border-dashed border-border bg-card hover:bg-muted/50 hover:border-primary/50 transition-all cursor-pointer">
+                      <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Camera className="w-8 h-8 text-primary" />
+                        </div>
+                        <div className="text-center">
+                          <p className="font-medium text-foreground">사진/영상 촬영 또는 업로드</p>
+                          <p className="text-xs">우리 아이의 예쁜 모습을 담아주세요</p>
+                        </div>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*,video/*"
+                        className="hidden"
+                        onChange={handlePhotoChange}
+                      />
+                    </label>
+                  )}
+                  <p className="text-xs text-center text-muted-foreground pt-2">
+                    사진이나 영상은 필수는 아니에요. 다음 버튼을 눌러 건너뛸 수 있습니다.
+                  </p>
+                </div>
               ) : (
                 // 선택형 질문
-                currentQuestion.options.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => handleAnswer(option.value)}
-                    className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
-                      answers[currentQuestion.id] === option.value
-                        ? "border-primary bg-primary/5"
-                        : "border-border bg-card hover:border-primary/50"
-                    }`}
-                  >
-                    <span
-                      className={`font-medium ${answers[currentQuestion.id] === option.value ? "text-primary" : "text-foreground"}`}
-                    >
-                      {option.label}
-                    </span>
-                  </button>
-                ))
+                <div className="space-y-3">
+                  {currentQuestion.options.map((option) => {
+                    const isSelected = answers[currentQuestion.id] === option.value || answers[currentQuestion.id]?.startsWith(`${option.value}:`);
+                    return (
+                      <div key={option.value} className="space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => handleAnswer(option.value)}
+                          className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                            isSelected
+                              ? "border-primary bg-primary/5"
+                              : "border-border bg-card hover:border-primary/50"
+                          }`}
+                        >
+                          <span
+                            className={`font-medium ${isSelected ? "text-primary" : "text-foreground"}`}
+                          >
+                            {option.label}
+                          </span>
+                        </button>
+                        {/* 'other' 선택 시 노출되는 입력 필드 */}
+                        {option.value === "other" && isSelected && (
+                          <div className="pl-4 pr-1 mt-1">
+                            <Input
+                              type="text"
+                              placeholder="어떤 증상이었는지 알려주세요"
+                              value={customText}
+                              onChange={(e) => handleCustomTextChange(e.target.value)}
+                              autoFocus
+                              className="w-full"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </CardContent>
@@ -217,7 +373,7 @@ export default function QuestionsPage() {
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <Button onClick={handleNext} disabled={!hasCurrentAnswer || isSubmitting} className="flex-1 h-12" size="lg">
+          <Button onClick={handleNext} disabled={!hasCurrentAnswer || (answers[currentQuestion.id] === "other" && !customText.trim()) || isSubmitting} className="flex-1 h-12" size="lg">
             {isSubmitting ? "처리 중..." : isLastQuestion ? "완료" : "다음"}
             <ArrowRight className="w-5 h-5 ml-2" />
           </Button>

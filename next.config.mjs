@@ -7,6 +7,15 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  async redirects() {
+    return [
+      {
+        source: '/onboarding/consent',
+        destination: '/',
+        permanent: false,
+      },
+    ]
+  },
 }
 
 export default nextConfig

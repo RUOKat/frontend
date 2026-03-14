@@ -1,34 +1,19 @@
-import { getTokens, BASE_URL } from './backend';
+import { backendFetch } from './backend';
 
 /**
  * 이미지 파일을 백엔드에 업로드하고 URL을 반환
  */
 export async function uploadImage(file: File): Promise<string | null> {
-  const { accessToken } = getTokens();
-
-  if (!accessToken) {
-    console.error('No access token for upload');
-    return null;
-  }
-
   const formData = new FormData();
   formData.append('file', file);
 
   try {
-    const response = await fetch(`${BASE_URL}/uploads/image`, {
+    const data = await backendFetch<any>('/uploads/image', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
       body: formData,
     });
 
-    if (!response.ok) {
-      console.error('Upload failed:', response.status, response.statusText);
-      return null;
-    }
-
-    const data = await response.json();
+    if (!data) return null;
 
     // Handle wrapped response
     if (data.success && data.data) {

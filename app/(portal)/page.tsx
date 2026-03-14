@@ -6,16 +6,35 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+// ChartContainer import removed
 import { CheckinPopup } from "@/components/app/checkin-popup"
 import { CatSelector } from "@/components/app/cat-selector"
 import { CareBenefitPromo } from "@/components/app/care-benefit-promo"
 import { useActiveCat } from "@/contexts/active-cat-context"
-import { fetchMonthlyCare, fetchCareLogByDate, fetchDiagQuestions, type CareLog } from "@/lib/backend-care"
-import { Calendar, MessageCircle, ExternalLink, Bell, Trash2, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { type OkatSummary } from "@/lib/okat-data"
+// recharts imports removed
+import { 
+  fetchMonthlyCare, fetchCareLogByDate, type CareLog
+} from "@/lib/backend-care"
+import { Calendar, MessageCircle, ExternalLink, Bell, Trash2, Loader2, ChevronLeft, ChevronRight, Gift, AlertTriangle } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
 import { fetchNotifications, markNotificationAsRead, deleteNotification, type Notification } from "@/lib/backend-notifications"
 import { getTokens } from "@/lib/backend"
 import { useOnboarding } from "@/contexts/onboarding-context"
+import { getMediaUrl } from "@/lib/backend"
 
 type MonthlyCareRecord = {
   completedDays: string[]
@@ -41,6 +60,36 @@ const getStampIndex = (value: string) => {
   return Math.abs(hash) % stampImages.length
 }
 
+type MetricPoint = {
+  day: number
+  date: string
+  value: number
+  label?: string
+}
+
+// 위험도 레벨에 따른 색상
+function getRiskLevelColor(level: string) {
+  switch (level?.toLowerCase()) {
+    case 'high': return 'bg-red-500'
+    case 'medium':
+    case 'caution': return 'bg-yellow-500'
+    case 'low':
+    case 'normal': return 'bg-green-500'
+    default: return 'bg-gray-500'
+  }
+}
+
+function getRiskLevelText(level: string) {
+  switch (level?.toLowerCase()) {
+    case 'high': return '높음'
+    case 'medium':
+    case 'caution': return '주의'
+    case 'low':
+    case 'normal': return '양호'
+    default: return '알 수 없음'
+  }
+}
+
 export default function HomePage() {
   const router = useRouter()
   const { activeCat, activeCatId } = useActiveCat()
@@ -55,24 +104,27 @@ export default function HomePage() {
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false)
-  
+
+  // Okat Dashboard States
+  // Removed unused/non-existent dashboard states to resolve 404 errors
+
   // 케어 로그 다이얼로그 상태
   const [careLogDialogOpen, setCareLogDialogOpen] = useState(false)
   const [selectedCareLog, setSelectedCareLog] = useState<CareLog | null>(null)
   const [isLoadingCareLog, setIsLoadingCareLog] = useState(false)
   const [selectedDate, setSelectedDate] = useState("")
-  
+
   // 오늘의 케어 로그 (진단설문 버튼 표시 여부 판단용)
   const [todayCareLog, setTodayCareLog] = useState<CareLog | null>(null)
-  
-  // 진단설문 버튼 클릭 관련 상태
-  const [isCheckingDiag, setIsCheckingDiag] = useState(false)
-  const [noDiagQuestionsOpen, setNoDiagQuestionsOpen] = useState(false)
+
+  // 진단설문 버튼 클릭 관련 상태 제거 (백엔드 미구현)
 
   // 캘린더 월 선택 상태
   const [calendarDate, setCalendarDate] = useState(() => new Date())
   const [isLoadingCalendar, setIsLoadingCalendar] = useState(false)
   const [calendarCareData, setCalendarCareData] = useState<string[]>([])
+  const [benefitDialogOpen, setBenefitDialogOpen] = useState(false)
+  const [editConfirmOpen, setEditConfirmOpen] = useState(false)
 
   // 캘린더 월 변경
   const handlePrevMonth = () => {
@@ -97,7 +149,7 @@ export default function HomePage() {
   // 선택된 월의 케어 데이터 로드
   const loadCalendarData = useCallback(async () => {
     if (!activeCatId) return
-    
+
     setIsLoadingCalendar(true)
     try {
       const year = calendarDate.getFullYear()
@@ -147,7 +199,7 @@ export default function HomePage() {
         streak: 0,
         completionRate: currentData.completedDays.length / now.getDate(),
       })
-      
+
       // 오늘의 케어 로그 로드 (진단설문 버튼 표시 여부 판단용)
       const todayISO = `${year}-${String(month).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
       if (currentData.completedDays.includes(todayISO)) {
@@ -171,11 +223,12 @@ export default function HomePage() {
       setTodayCareLog(null)
     }
   }, [activeCatId])
-
+  
   // 초기 로드 및 activeCatId 변경 시 로드
   useEffect(() => {
     loadMonthlyCare()
   }, [loadMonthlyCare])
+  // Okat Dashboard Data Load removed to resolve 404 errors
 
   // 알림 목록 로드
   const loadNotifications = useCallback(async () => {
@@ -201,12 +254,12 @@ export default function HomePage() {
   // 완료된 날짜 클릭 시 케어 로그 조회
   const handleDayClick = useCallback(async (dateISO: string) => {
     if (!activeCatId) return
-    
+
     setSelectedDate(dateISO)
     setCareLogDialogOpen(true)
     setIsLoadingCareLog(true)
     setSelectedCareLog(null)
-    
+
     try {
       const careLog = await fetchCareLogByDate(activeCatId, dateISO)
       setSelectedCareLog(careLog)
@@ -366,48 +419,16 @@ export default function HomePage() {
   // 오늘 checkIn 기록(answers)이 있는지 확인
   const hasCheckInAnswers = todayCareLog?.answers && Object.keys(todayCareLog.answers).length > 0
 
-  // 진단설문 버튼 클릭 핸들러
+  // 진단 설문 버튼 클릭 핸들러
   const handleDiagSurveyClick = async () => {
     if (!activeCatId) return
-    
-    if (hasCheckInAnswers) {
-      // checkIn 기록이 있으면 diag-questions API 호출
-      setIsCheckingDiag(true)
-      try {
-        const diagQuestions = await fetchDiagQuestions(activeCatId)
-        
-        if (diagQuestions.length === 0) {
-          // 질문이 없으면 팝업 표시
-          setNoDiagQuestionsOpen(true)
-        } else {
-          // 질문이 있으면 follow-up 페이지로 이동
-          // followUpPlan에 질문 설정
-          setFollowUpPlan({
-            category: 'DIAG',
-            questions: diagQuestions.map(q => ({
-              id: q.id,
-              text: q.text,
-              description: '진단 질문입니다.',
-              type: q.type as 'single' | 'yesno' | 'number',
-              options: q.options.map(opt => ({
-                value: opt.value,
-                label: opt.label,
-                score: opt.signal === 'ABNORMAL' ? 1 : 0,
-              })),
-              category: 'DIAG',
-            })),
-          })
-          router.push('/onboarding/follow-up')
-        }
-      } catch (error) {
-        console.error('Failed to fetch diag questions:', error)
-        setNoDiagQuestionsOpen(true)
-      } finally {
-        setIsCheckingDiag(false)
-      }
-    } else {
-      // checkIn 기록이 없으면 questions 페이지로 이동
+
+    if (!hasCheckInAnswers) {
+      // 오늘의 기록이 아직 안 되었으면 기록 페이지로 이동
       router.push('/onboarding/questions')
+    } else {
+      // 이미 완료된 경우 수정 여부 묻기
+      setEditConfirmOpen(true)
     }
   }
 
@@ -432,17 +453,17 @@ export default function HomePage() {
     `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
 
   const now = new Date()
-  
+
   // 캘린더에 표시할 월 (선택된 월)
   const calYear = calendarDate.getFullYear()
   const calMonthIndex = calendarDate.getMonth()
   const calDaysInMonth = new Date(calYear, calMonthIndex + 1, 0).getDate()
-  
+
   // 현재 월인지 확인
   const isCurrentMonth = calYear === now.getFullYear() && calMonthIndex === now.getMonth()
   // 미래 달로 이동 불가 체크
   const canGoNext = !(calYear === now.getFullYear() && calMonthIndex >= now.getMonth())
-  
+
   const weekDayIndexMap = {
     sun: 0,
     mon: 1,
@@ -481,11 +502,11 @@ export default function HomePage() {
   }
 
   const hasSchedule = scheduledDaySet.size > 0
-  
+
   // 선택된 월 기준으로 통계 계산
   // 현재 월이면 오늘까지, 과거 월이면 해당 월 전체
   const calMaxDay = isCurrentMonth ? now.getDate() : calDaysInMonth
-  
+
   // 선택된 월의 스케줄된 날짜 수
   let calScheduledCount = 0
   if (hasSchedule) {
@@ -519,7 +540,7 @@ export default function HomePage() {
   const targetDays = hasSchedule ? calScheduledCount : calMaxDay
   const completedSurveyDays = hasSchedule ? calScheduledCompletedCount : calCompletedCount
   const completionRatePercent = Math.round((completedSurveyDays / Math.max(1, targetDays)) * 100)
-  
+
   const year = now.getFullYear()
   const monthIndex = now.getMonth()
   const todayISO = formatISODate(year, monthIndex, now.getDate())
@@ -528,7 +549,7 @@ export default function HomePage() {
   // 2. 오늘 기록이 있어도 diagAnswers가 비어있으면 표시
   const hasTodayRecord = monthlyCare.completedDays.includes(todayISO)
   const hasDiagAnswers = todayCareLog?.diagAnswers && Object.keys(todayCareLog.diagAnswers).length > 0
-  const needsSurveyToday = hasSchedule 
+  const needsSurveyToday = hasSchedule
     ? scheduledDaySet.has(now.getDay() as 0 | 1 | 2 | 3 | 4 | 5 | 6) && (!hasTodayRecord || !hasDiagAnswers)
     : !hasTodayRecord || !hasDiagAnswers
   const firstDayIndex = new Date(calYear, calMonthIndex, 1).getDay()
@@ -554,11 +575,10 @@ export default function HomePage() {
         type="button"
         onClick={() => isClickable && handleDayClick(dateISO)}
         disabled={!isClickable}
-        className={`relative isolate flex aspect-square min-h-[32px] items-center justify-center rounded-md border p-0.5 text-[10px] transition ${
-          isCompleted 
-            ? "border-primary/30 bg-primary/10 text-primary cursor-pointer hover:bg-primary/20" 
+        className={`relative isolate flex aspect-square min-h-[32px] items-center justify-center rounded-md border p-0.5 text-[10px] transition ${isCompleted
+            ? "border-primary/30 bg-primary/10 text-primary cursor-pointer hover:bg-primary/20"
             : "border-border/40 bg-muted/40 text-muted-foreground cursor-default"
-        } ${isToday ? "ring-2 ring-rose-300" : ""}`}
+          } ${isToday ? "ring-2 ring-rose-300" : ""}`}
       >
         {resolvedStampSrc ? (
           <>
@@ -579,6 +599,10 @@ export default function HomePage() {
     )
   })
 
+  // Dashboard Chart Data logic removed
+
+  // -------------------------
+  
   return (
     <div className="min-h-screen bg-background">
       <CheckinPopup catId={activeCatId} catName={activeCat?.name} onCheckinSaved={loadMonthlyCare} />
@@ -636,6 +660,15 @@ export default function HomePage() {
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-primary" />
                 월간 케어 참여 기록
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 ml-1 text-amber-500 hover:text-amber-600 hover:bg-amber-50/50"
+                  onClick={() => setBenefitDialogOpen(true)}
+                  title="케어 참여 혜택 보기"
+                >
+                  <Gift className="w-5 h-5" />
+                </Button>
               </CardTitle>
               <div className="flex items-center gap-1">
                 <Button
@@ -683,46 +716,50 @@ export default function HomePage() {
           </CardContent>
         </Card>
 
-        {/* 케어 참여 혜택 */}
-        <CareBenefitPromo />
+        {/* Dashboard Placeholder or additional sections could go here */}
 
       </main>
 
-      {needsSurveyToday && (
+      {(hasCheckInAnswers || !hasTodayRecord) && (
         <Button
           onClick={handleDiagSurveyClick}
-          disabled={isCheckingDiag}
-          className="fixed bottom-24 right-4 z-40 h-12 rounded-full px-5 shadow-lg cta-nudge"
-          aria-label={hasCheckInAnswers ? "진단 설문" : "데일리 설문"}
+          className={`fixed bottom-24 right-4 z-40 h-12 rounded-full px-5 shadow-lg ${!hasCheckInAnswers ? "cta-nudge shadow-primary/50" : "bg-muted shadow-lg"}`}
+          aria-label={hasCheckInAnswers ? "기록 완료" : "오늘의 기록"}
         >
           <span className="relative inline-flex items-center">
-            {isCheckingDiag ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <MessageCircle className="w-4 h-4 mr-2" />
+            <MessageCircle className="w-4 h-4 mr-2" />
+            {hasCheckInAnswers ? "기록 완료" : "오늘의 기록"}
+            {!hasCheckInAnswers && (
+              <span className="cta-badge" aria-hidden="true">
+                !
+              </span>
             )}
-            {hasCheckInAnswers ? "진단 설문" : "데일리 설문"}
-            <span className="cta-badge" aria-hidden="true">
-              !
-            </span>
           </span>
         </Button>
       )}
 
-      {/* 진단 질문 없음 팝업 */}
-      <Dialog open={noDiagQuestionsOpen} onOpenChange={setNoDiagQuestionsOpen}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>아직 질문이 없어요</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            아직 진단 질문이 준비되지 않았어요. 잠시 후 다시 시도해주세요.
-          </p>
-          <Button onClick={() => setNoDiagQuestionsOpen(false)} className="w-full mt-2">
-            확인
-          </Button>
-        </DialogContent>
-      </Dialog>
+      {/* 기록 수정 확인 팝업 */}
+      <AlertDialog open={editConfirmOpen} onOpenChange={setEditConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>오늘의 기록을 수정할까요?</AlertDialogTitle>
+            <AlertDialogDescription>
+              이미 기록을 완료했습니다. 내용을 수정하시겠습니까?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => router.push('/onboarding/questions')}
+              className="bg-primary hover:bg-primary/90"
+            >
+              수정하기
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 진단 질문 팝업 제거 (백엔드 미구현) */}
 
       <Dialog open={tipOpen} onOpenChange={setTipOpen}>
         <DialogContent className="sm:max-w-lg">
@@ -776,9 +813,8 @@ export default function HomePage() {
                 <div
                   key={notification.id}
                   onClick={() => handleNotificationClick(notification.id)}
-                  className={`w-full rounded-lg border px-3 py-2 text-left transition cursor-pointer ${
-                    notification.isRead ? "border-border bg-background opacity-60" : "border-primary/30 bg-primary/5"
-                  }`}
+                  className={`w-full rounded-lg border px-3 py-2 text-left transition cursor-pointer ${notification.isRead ? "border-border bg-background opacity-60" : "border-primary/30 bg-primary/5"
+                    }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0 space-y-1">
@@ -831,6 +867,27 @@ export default function HomePage() {
             </div>
           ) : selectedCareLog ? (
             <div className="space-y-4">
+              {/* 이미지/영상 */}
+              {selectedCareLog.imageUrl && (
+                <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-muted">
+                   {selectedCareLog.imageUrl.toLowerCase().match(/\.(mp4|mov|webm|quicktime)$/) ? (
+                     <video 
+                        src={getMediaUrl(selectedCareLog.imageUrl)} 
+                        className="w-full h-full object-cover" 
+                        autoPlay 
+                        muted 
+                        loop 
+                        playsInline 
+                      />
+                   ) : (
+                     <img 
+                        src={getMediaUrl(selectedCareLog.imageUrl)} 
+                        alt="오늘의 기록" 
+                        className="w-full h-full object-cover" 
+                      />
+                   )}
+                </div>
+              )}
               {/* 체크인 질문/답변 */}
               {selectedCareLog.questions && selectedCareLog.answers && (
                 <div className="space-y-3">
@@ -881,6 +938,16 @@ export default function HomePage() {
               케어 기록을 불러올 수 없습니다.
             </p>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* 케어 참여 혜택 다이얼로그 */}
+      <Dialog open={benefitDialogOpen} onOpenChange={setBenefitDialogOpen}>
+        <DialogContent className="max-w-lg p-0 overflow-hidden border-none bg-transparent shadow-none">
+          <DialogHeader className="sr-only">
+            <DialogTitle>케어 참여 혜택</DialogTitle>
+          </DialogHeader>
+          <CareBenefitPromo />
         </DialogContent>
       </Dialog>
     </div>

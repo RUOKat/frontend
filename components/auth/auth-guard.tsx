@@ -30,7 +30,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
   // 초기 로드 시 로컬 스토리지 직접 확인
   useEffect(() => {
     if (typeof window === "undefined") return
-    
+
     // 로컬 스토리지에서 직접 cats 확인
     const storedCats = loadCats<any>()
     if (storedCats.length > 0) {
@@ -85,11 +85,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
       if (pathname === "/onboarding/cat") {
         // 펫이 있고 새 펫 추가 모드가 아니면 홈으로 (선택적)
         // 현재는 항상 접근 허용
-        return
-      }
-
-      if (pathname === "/onboarding/consent" && !hasCats) {
-        router.replace("/onboarding/cat")
         return
       }
 

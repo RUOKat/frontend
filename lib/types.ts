@@ -70,7 +70,7 @@ export interface Question {
   id: string
   text: string
   description: string
-  type: "single" | "scale" | "yesno" | "number"
+  type: "single" | "scale" | "yesno" | "number" | "photo"
   options: QuestionOption[]
   category?: "FLUTD" | "CKD" | "GI" | "PAIN" | "DAILY" | "DIAG"
   validation?: {

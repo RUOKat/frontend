@@ -71,7 +71,10 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
   const setOnboardingAnswers = (answers: OnboardingAnswers) => {
     setOnboardingAnswersState(answers)
-    storageSaveOnboardingAnswers(answers, activeCatId ?? undefined)
+    // 💡 [추가 보호] OnboardingProvider 수준에서도 사진을 제외하고 저장하도록 함
+    const answersToSave = { ...answers }
+    if (answersToSave['q7_photo']) delete answersToSave['q7_photo']
+    storageSaveOnboardingAnswers(answersToSave, activeCatId ?? undefined)
   }
 
   const setFollowUpPlan = (plan: FollowUpPlan | null) => {

@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useActiveCat } from "@/contexts/active-cat-context"
+import { useOnboarding } from "@/contexts/onboarding-context"
 import { catBreeds } from "@/lib/mock"
 import { uploadImage } from "@/lib/backend-uploads"
 import {
@@ -143,6 +144,7 @@ function createCatId(): string {
 export default function CatProfilePage() {
   const router = useRouter()
   const { activeCat, activeCatId, addCat, updateCat, deleteCat, cats } = useActiveCat()
+  const { setOnboardingCompleted } = useOnboarding()
   const [showOptional, setShowOptional] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null)
@@ -186,12 +188,9 @@ export default function CatProfilePage() {
   const [notes, setNotes] = useState("")
   const [vetInfo, setVetInfo] = useState("")
 
-  const isAgencyAdoption = adoptionPath === agencyAdoptionPath
-  const trimmedAgencyCode = adoptionAgencyCode.trim()
-  const isAgencyCodeValid = !isAgencyAdoption || trimmedAgencyCode.length >= 4
-  const showAgencyCodeError = isAgencyAdoption && trimmedAgencyCode.length < 4
-
-  const hasAdoptionPath = adoptionPath && (adoptionPath !== "기타" || customAdoptionPath.trim())
+  const hasAdoptionPath = true // 필드 제거로 인해 항상 true
+  const isAgencyCodeValid = true // 필드 제거로 인해 항상 true
+  const showAgencyCodeError = false
   const surveyFrequencyValue = 7 // 고정값
   const isSurveyScheduleValid = true // 항상 유효
   const isValid =
@@ -224,9 +223,9 @@ export default function CatProfilePage() {
   const searchResults =
     medicationQuery.length >= 2
       ? medicationCatalogUnique
-          .filter((item) => item.toLowerCase().includes(medicationQuery.toLowerCase()))
-          .filter((item) => !selectedMedicationIds.has(createMedicationId(item)))
-          .slice(0, 8)
+        .filter((item) => item.toLowerCase().includes(medicationQuery.toLowerCase()))
+        .filter((item) => !selectedMedicationIds.has(createMedicationId(item)))
+        .slice(0, 8)
       : []
 
   const addMedicationSelection = (label: string, source: MedicationSelection["source"]) => {
@@ -257,11 +256,6 @@ export default function CatProfilePage() {
     })
   }
 
-  useEffect(() => {
-    if (!isAgencyAdoption) {
-      setAdoptionAgencyCode("")
-    }
-  }, [isAgencyAdoption])
 
   useEffect(() => {
     if (isNewCatMode || !activeCat) return
@@ -386,7 +380,7 @@ export default function CatProfilePage() {
 
   const handleDelete = async () => {
     if (!activeCat?.id) return
-    
+
     setIsDeleting(true)
     try {
       const success = await deleteCat(activeCat.id)
@@ -431,10 +425,10 @@ export default function CatProfilePage() {
     const profile: CatProfile = {
       id: nextId,
       name: name.trim(),
-      adoptionPath: adoptionPath === "기타" ? customAdoptionPath.trim() : adoptionPath,
-      adoptionSource: resolveAdoptionSource(adoptionPath),
-      adoptionAgencyCode: isAgencyAdoption ? trimmedAgencyCode : undefined,
-      agencyCode: isAgencyAdoption ? trimmedAgencyCode : undefined,
+      adoptionPath: "기타", // 필드 제거로 인한 기본값 설정
+      adoptionSource: "other",
+      adoptionAgencyCode: undefined,
+      agencyCode: undefined,
       unknownBirthday,
       birthDate: unknownBirthday ? undefined : birthDate,
       familyDate: familyDate || undefined,
@@ -481,7 +475,8 @@ export default function CatProfilePage() {
     } else {
       updateCat(profile)
     }
-    router.push("/onboarding/consent")
+    setOnboardingCompleted(true)
+    router.push("/")
   }
 
   return (
@@ -554,50 +549,6 @@ export default function CatProfilePage() {
                 )}
               </div>
 
-              {/* 입양 경로 */}
-              <div className="space-y-2">
-                <Label>입양 경로 <span className="text-destructive">*</span></Label>
-                <Select value={adoptionPath} onValueChange={setAdoptionPath}>
-                  <SelectTrigger className={showValidation && !hasAdoptionPath ? "border-destructive ring-destructive" : ""}>
-                    <SelectValue placeholder="입양 경로 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {adoptionPaths.map((path) => (
-                      <SelectItem key={path} value={path}>
-                        {path}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {showValidation && !hasAdoptionPath && (
-                  <p className="text-xs text-destructive">입양 경로를 선택해 주세요.</p>
-                )}
-                {adoptionPath === "기타" && (
-                  <Input
-                    value={customAdoptionPath}
-                    onChange={(e) => setCustomAdoptionPath(e.target.value)}
-                    placeholder="입양 경로 입력"
-                    className={`mt-2 ${showValidation && adoptionPath === "기타" && !customAdoptionPath.trim() ? "border-destructive ring-destructive" : ""}`}
-                  />
-                )}
-                {isAgencyAdoption && (
-                  <div className="mt-2 space-y-2">
-                    <Label htmlFor="adoptionAgencyCode">기관 코드</Label>
-                    <Input
-                      id="adoptionAgencyCode"
-                      value={adoptionAgencyCode}
-                      onChange={(e) => setAdoptionAgencyCode(e.target.value)}
-                      placeholder="예) RUOKAT-1234"
-                    />
-                    <p className="text-xs text-muted-foreground">입양기관에서 받은 코드를 입력해 주세요.</p>
-                    {showAgencyCodeError && (
-                      <p className="text-xs text-destructive">
-                        기관 입양을 선택한 경우 기관 코드는 필수입니다.
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
 
               {/* 생년월일 */}
               <div className="space-y-2">
@@ -1005,11 +956,10 @@ export default function CatProfilePage() {
                             key={group.id}
                             type="button"
                             onClick={() => toggleMedicalGroup(group.id)}
-                            className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
-                              isSelected
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "border-border bg-background text-foreground"
-                            }`}
+                            className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${isSelected
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border bg-background text-foreground"
+                              }`}
                             aria-pressed={isSelected}
                           >
                             {group.label}

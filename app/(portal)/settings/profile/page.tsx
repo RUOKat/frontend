@@ -31,6 +31,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { uploadImage } from "@/lib/backend-uploads"
 import { updateMyProfile } from "@/lib/backend-users"
+import { getMediaUrl } from "@/lib/backend"
 
 export default function UserProfileEditPage() {
   const router = useRouter()
@@ -56,33 +57,7 @@ export default function UserProfileEditPage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
-  // 케어 공유 관련 상태 계산
-  const adoptionPathLabel = activeCat?.adoptionPath?.toLowerCase() ?? ""
-  const adoptionSource = activeCat?.adoptionSource
-  const hasAgencyCode = Boolean(activeCat?.agencyCode?.trim() || activeCat?.adoptionAgencyCode?.trim())
-  const isAgencyAdoption =
-    adoptionSource === "shelter" ||
-    adoptionSource === "agency" ||
-    (hasAgencyCode &&
-      (adoptionPathLabel.includes("보호소") ||
-        adoptionPathLabel.includes("입양기관") ||
-        adoptionPathLabel.includes("agency") ||
-        adoptionPathLabel.includes("shelter")))
-
-  const careShareEndAt = activeCat?.dataSharing?.expiresAt || activeCat?.careShareEndAt
-  const careShareEndAtTime = careShareEndAt ? new Date(careShareEndAt).getTime() : null
-  const now = Date.now()
-  const isSharePeriodExpired = careShareEndAtTime !== null && careShareEndAtTime < now
-  const shareActive =
-    activeCat?.dataSharing?.enabled != null
-      ? activeCat.dataSharing.enabled && !isSharePeriodExpired
-      : (isAgencyAdoption && !isSharePeriodExpired)
-  const shareStatusLabel = isSharePeriodExpired ? "종료됨" : shareActive ? "공유 중" : "선택 안 함"
-  const shareRangeLabel = activeCat?.dataSharing?.required
-    ? "상태 신호만"
-    : activeCat?.dataSharing?.enabled
-      ? "상태 요약"
-      : "미설정"
+  // 케어 공유 섹션 제거로 인한 로직 생략
 
   useEffect(() => {
     setName(user?.name ?? "")
@@ -278,7 +253,7 @@ export default function UserProfileEditPage() {
             <div className="flex items-center gap-4">
               <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center overflow-hidden">
                 {profilePhoto ? (
-                  <img src={profilePhoto} alt="집사님 프로필" className="h-full w-full object-cover" />
+                  <img src={getMediaUrl(profilePhoto)} alt="집사님 프로필" className="h-full w-full object-cover" />
                 ) : (
                   <User className="w-8 h-8 text-muted-foreground" />
                 )}
@@ -350,25 +325,6 @@ export default function UserProfileEditPage() {
               </CardContent>
             </Card>
 
-            {/* 케어 프로그램/기관 공유 섹션 */}
-            <div>
-              <Link href="/onboarding/consent">
-                <Card className="hover:bg-muted/50 transition-colors">
-                  <CardContent className="py-0.5 px-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1">
-                        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
-                          <ShieldCheck className="w-3 h-3 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">공동 케어 프로그램</p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            </div>
             <Dialog
               open={isPasswordOpen}
               onOpenChange={(open) => {

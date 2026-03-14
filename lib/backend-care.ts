@@ -7,8 +7,9 @@ export interface QuestionsData {
 }
 
 /**
- * 백엔드에서 질문 데이터 가져오기 (인증 필요)
+ * 백엔드에서 질문 데이터 가져오기 (인증 필요) - 로컬 질문 사용으로 비활성화
  */
+/*
 export async function fetchQuestions(): Promise<QuestionsData> {
   const response = await backendFetch<any>('/care/questions', {
     method: 'GET',
@@ -20,18 +21,18 @@ export async function fetchQuestions(): Promise<QuestionsData> {
     throw new Error('Failed to fetch questions');
   }
 
-  // Handle wrapped response {success: true, data: {...}}
   if (response.success && response.data) {
     return response.data as QuestionsData;
   }
 
-  // Handle direct response
   return response as QuestionsData;
 }
+*/
 
 /**
- * petId별 맞춤 질문 데이터 가져오기 (DynamoDB question_bank 포함)
+ * petId별 맞춤 질문 데이터 가져오기 - 로컬 질문 사용으로 비활성화
  */
+/*
 export async function fetchQuestionsForPet(petId: string): Promise<QuestionsData> {
   const response = await backendFetch<any>(`/care/${petId}/questions`, {
     method: 'GET',
@@ -43,14 +44,13 @@ export async function fetchQuestionsForPet(petId: string): Promise<QuestionsData
     throw new Error('Failed to fetch questions for pet');
   }
 
-  // Handle wrapped response {success: true, data: {...}}
   if (response.success && response.data) {
     return response.data as QuestionsData;
   }
 
-  // Handle direct response
   return response as QuestionsData;
 }
+*/
 
 /**
  * 체크인 기록 저장 (questions + answers)
@@ -179,8 +179,9 @@ export interface DiagQuestion {
 }
 
 /**
- * 진단 질문 가져오기 (DynamoDB DiagnosticTable에서)
+ * 진단 질문 가져오기 - 로컬 질문 사용으로 비활성화
  */
+/*
 export async function fetchDiagQuestions(petId: string): Promise<DiagQuestion[]> {
   const response = await backendFetch<any>(
     `/care/${petId}/diag-questions`,
@@ -193,19 +194,19 @@ export async function fetchDiagQuestions(petId: string): Promise<DiagQuestion[]>
     return [];
   }
 
-  // Handle wrapped response {success: true, data: [...]}
   if (response.success && response.data) {
     return response.data as DiagQuestion[];
   }
 
-  // Handle direct response (array)
   if (Array.isArray(response)) {
     return response as DiagQuestion[];
   }
 
   return [];
 }
+*/
 
+/*
 export interface MonthlyStats {
   totalDays: number;
   food: { normal: number; less: number; more: number; none: number };
@@ -229,10 +230,12 @@ export interface MonthlyStats {
     urineLabel: string;
   }[];
 }
+*/
 
 /**
- * 월간 케어 통계 조회 (핵심 지표)
+ * 월간 케어 통계 조회 (핵심 지표) - 백엔드 미구현으로 비활성화 (404 방지)
  */
+/*
 export async function fetchMonthlyStats(
   petId: string,
   year: number,
@@ -249,15 +252,15 @@ export async function fetchMonthlyStats(
     return null;
   }
 
-  // Handle wrapped response {success: true, data: {...}}
   if (response.success && response.data) {
     return response.data as MonthlyStats;
   }
 
-  // Handle direct response
   return response as MonthlyStats;
 }
+*/
 
+/*
 export interface DailyReport {
   id: string;
   date: string;
@@ -267,10 +270,12 @@ export interface DailyReport {
   fullReport: string;
   createdAt: string;
 }
+*/
 
 /**
- * 일일 리포트 조회 (DynamoDB DiagnosticTable final_report)
+ * 일일 리포트 조회 - 백엔드 미구현으로 비활성화 (404 방지)
  */
+/*
 export async function fetchDailyReports(petId: string): Promise<DailyReport[]> {
   const response = await backendFetch<any>(
     `/care/${petId}/daily-reports`,
@@ -283,19 +288,19 @@ export async function fetchDailyReports(petId: string): Promise<DailyReport[]> {
     return [];
   }
 
-  // Handle wrapped response {success: true, data: [...]}
   if (response.success && response.data) {
     return response.data as DailyReport[];
   }
 
-  // Handle direct response (array)
   if (Array.isArray(response)) {
     return response as DailyReport[];
   }
 
   return [];
 }
+*/
 
+/*
 export interface HealthContext {
   riskLevel: string;
   riskTags: string[];
@@ -304,10 +309,12 @@ export interface HealthContext {
   updatedAt: string;
   todayObservations: string[];
 }
+*/
 
 /**
- * 건강 컨텍스트 조회 (UpdatedContextTable - 위험도, 태그, 요약)
+ * 건강 컨텍스트 조회 - 백엔드 미구현으로 비활성화 (404 방지)
  */
+/*
 export async function fetchHealthContext(petId: string): Promise<HealthContext | null> {
   const response = await backendFetch<any>(
     `/care/${petId}/health-context`,
@@ -320,15 +327,15 @@ export async function fetchHealthContext(petId: string): Promise<HealthContext |
     return null;
   }
 
-  // Handle wrapped response {success: true, data: {...}}
   if (response.success && response.data) {
     return response.data as HealthContext;
   }
 
-  // Handle direct response
   return response as HealthContext;
 }
+*/
 
+/*
 export interface HealthTrend {
   trendData: {
     date: string;
@@ -340,10 +347,12 @@ export interface HealthTrend {
   recentSymptoms: string[];
   totalDiagnoses: number;
 }
+*/
 
 /**
- * 건강 트렌드 조회 (DiagnosticTable - 진단 답변 기반 이상 증상 추이)
+ * 건강 트렌드 조회 - 백엔드 미구현으로 비활성화 (404 방지)
  */
+/*
 export async function fetchHealthTrend(petId: string): Promise<HealthTrend | null> {
   const response = await backendFetch<any>(
     `/care/${petId}/health-trend`,
@@ -356,11 +365,10 @@ export async function fetchHealthTrend(petId: string): Promise<HealthTrend | nul
     return null;
   }
 
-  // Handle wrapped response {success: true, data: {...}}
   if (response.success && response.data) {
     return response.data as HealthTrend;
   }
 
-  // Handle direct response
   return response as HealthTrend;
 }
+*/

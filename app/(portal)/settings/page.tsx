@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
 import { useWebView } from "@/contexts/webview-context"
+import { getMediaUrl } from "@/lib/backend"
 import { updateCameraSettings } from "@/lib/backend-users"
 import { useState, useEffect } from "react"
 import {
@@ -141,7 +142,7 @@ export default function SettingsPage() {
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
                   {user?.profilePhoto ? (
-                    <img src={user.profilePhoto} alt={`${user?.name || "집사님"} 프로필`} className="h-full w-full object-cover" />
+                    <img src={getMediaUrl(user.profilePhoto)} alt={`${user?.name || "집사님"} 프로필`} className="h-full w-full object-cover" />
                   ) : (
                     <User className="w-6 h-6 text-primary" />
                   )}

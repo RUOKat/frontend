@@ -31,7 +31,13 @@ export function loadCatProfile(): CatProfile | null {
 
 // Onboarding Answers
 export function saveOnboardingAnswers(answers: OnboardingAnswers, catId?: string): void {
-  storageSaveOnboardingAnswers(answers, catId)
+  // 💡 [수정] 사진(Base64)은 용량이 너무 커서 localStorage 저장 시 QuotaExceededError를 유발할 수 있음.
+  // 백엔드에는 메모리에 있는 원본 answers를 보내고, 저장소에는 사진을 뺀 버전을 저장함.
+  const answersToSave = { ...answers };
+  if ('q7_photo' in answersToSave) {
+    delete answersToSave['q7_photo'];
+  }
+  storageSaveOnboardingAnswers(answersToSave, catId);
 }
 
 export function loadOnboardingAnswers(catId?: string): OnboardingAnswers | null {

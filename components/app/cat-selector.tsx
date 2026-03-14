@@ -8,6 +8,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { Skeleton } from "@/components/ui/skeleton"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import type { CatProfile } from "@/lib/types"
+import { getMediaUrl } from "@/lib/backend"
 import { Cat, Check, ChevronDown, PlusCircle, Pencil } from "lucide-react"
 
 type DateParts = {
@@ -233,7 +234,7 @@ export function CatSelector({ embedded = false, primaryAction = "select" }: CatS
             <div className={avatarClassName}>
               {activeCat?.profilePhoto ? (
                 <img
-                  src={activeCat.profilePhoto}
+                  src={getMediaUrl(activeCat.profilePhoto)}
                   alt={`${activeCat.name} 프로필`}
                   className="h-full w-full object-cover"
                 />
@@ -315,7 +316,7 @@ export function CatSelector({ embedded = false, primaryAction = "select" }: CatS
                 >
                   <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden">
                     {cat.profilePhoto ? (
-                      <img src={cat.profilePhoto} alt={`${cat.name} 프로필`} className="h-full w-full object-cover" />
+                      <img src={getMediaUrl(cat.profilePhoto)} alt={`${cat.name} 프로필`} className="h-full w-full object-cover" />
                     ) : (
                       <Cat className="w-5 h-5 text-muted-foreground" />
                     )}

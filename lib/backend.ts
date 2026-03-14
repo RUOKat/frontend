@@ -4,6 +4,30 @@ import { clearAllData } from "./storage"
 
 export const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_BASE_URL ?? "http://192.168.0.140:3001/api"
 
+/**
+ * Returns the absolute URL for a media file (image/video).
+ * Handles both local paths (starts with /uploads) and remote paths (http).
+ */
+export function getMediaUrl(path: string | null | undefined): string {
+  if (!path) return ""
+  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) {
+    return path
+  }
+  
+  // 로컬 업로드는 백엔드의 루트 /uploads/ 에서 서빙됩니다.
+  // BASE_URL이 .../api 로 끝난다면 이를 제거하고 /uploads/... 를 붙입니다.
+  if (path.startsWith("/uploads/")) {
+    const baseUrlStripped = BASE_URL.replace(/\/api$/, "")
+    return `${baseUrlStripped}${path}`
+  }
+  
+  if (path.startsWith("/")) {
+    return `${BASE_URL}${path}`
+  }
+  
+  return `${BASE_URL}/${path}`
+}
+
 type BackendTokens = {
   accessToken: string | null
   idToken: string | null
@@ -13,6 +37,15 @@ export function getTokens(): BackendTokens {
   if (typeof window === "undefined") {
     return { accessToken: null, idToken: null }
   }
+
+  // [로컬 개발용] LOCAL_AUTH가 true이면 더미 토큰 반환
+  if (process.env.NEXT_PUBLIC_LOCAL_AUTH === "true") {
+    return {
+      accessToken: "local-dummy-access-token",
+      idToken: "local-dummy-id-token",
+    }
+  }
+
   return {
     accessToken: sessionStorage.getItem("access_token"),
     idToken: sessionStorage.getItem("id_token"),
@@ -107,9 +140,15 @@ export async function backendFetch<T = unknown>(path: string, options: BackendFe
 
   const { data, text } = await parseResponse<T>(response)
   if (!response.ok) {
+    const isSilentEndpoint = url.includes('/care/questions') || url.includes('/diag-questions')
+    const shouldSilence = response.status === 404 && isSilentEndpoint
+
     const bodyStr = text ?? (data ? JSON.stringify(data) : "(empty)")
-    console.error(`[API] ${response.status} ${response.statusText} - ${url}`)
-    console.error(`[API] Response body: ${bodyStr}`)
+    
+    if (!shouldSilence) {
+      console.error(`[API] ${response.status} ${response.statusText} - ${url}`)
+      console.error(`[API] Response body: ${bodyStr}`)
+    }
 
     // 401 Unauthorized → 로그아웃 처리
     if (response.status === 401) {

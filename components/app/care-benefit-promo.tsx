@@ -4,6 +4,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Gift } from "lucide-react"
 
 export function CareBenefitPromo() {
+  const currentMonth = new Date().getMonth() + 1
   return (
     <Alert className="border-amber-300/50 bg-gradient-to-br from-amber-50 via-orange-50/50 to-card dark:from-amber-950/30 dark:via-orange-950/20 dark:to-card px-2 shadow-sm">
       <AlertTitle className="flex items-center gap-2">
@@ -15,7 +16,7 @@ export function CareBenefitPromo() {
           <div className="w-full rounded-xl border border-amber-200/50 dark:border-amber-800/30 bg-background/70 p-4">
             <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
               <span className="rounded-full border border-amber-300 dark:border-amber-700 bg-amber-100 dark:bg-amber-900/50 px-3 py-1 text-amber-700 dark:text-amber-300">
-                1월 혜택
+                {currentMonth}월 혜택
               </span>
               <span className="rounded-full border border-border bg-secondary px-3 py-1">택 1</span>
               <span className="text-sm font-medium text-foreground/70">월간 케어 참여 80% 이상 하시면!</span>
