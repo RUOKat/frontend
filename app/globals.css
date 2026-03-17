@@ -206,6 +206,21 @@
   }
 }
 
+@layer utilities {
+  @keyframes light-bounce {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-6px);
+    }
+  }
+
+  .animate-light-bounce {
+    animation: light-bounce 1.5s ease-in-out infinite;
+  }
+}
+
 @keyframes cta-badge-ring {
   0% {
     opacity: 0.7;
@@ -248,10 +263,17 @@
   animation: cta-badge-ring 1.6s ease-out infinite;
 }
 
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.animate-shimmer {
+  animation: shimmer 3s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .cta-nudge,
-  .cta-badge,
-  .cta-badge::after {
+  .animate-shimmer {
     animation: none;
   }
 }

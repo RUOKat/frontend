@@ -19,17 +19,26 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-// ChartContainer import removed
 import { CheckinPopup } from "@/components/app/checkin-popup"
 import { CatSelector } from "@/components/app/cat-selector"
 import { CareBenefitPromo } from "@/components/app/care-benefit-promo"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { type OkatSummary } from "@/lib/okat-data"
-// recharts imports removed
 import { 
   fetchMonthlyCare, fetchCareLogByDate, type CareLog
 } from "@/lib/backend-care"
-import { Calendar, MessageCircle, ExternalLink, Bell, Trash2, Loader2, ChevronLeft, ChevronRight, Gift, AlertTriangle } from "lucide-react"
+import { 
+  fetchDashboardSummary, type DashboardSummary 
+} from "@/lib/backend-dashboard"
+import { 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip 
+} from "recharts"
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
+import { Calendar, MessageCircle, ExternalLink, Bell, Trash2, Loader2, ChevronLeft, ChevronRight, Gift, AlertTriangle, Activity, Sparkles } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
 import { fetchNotifications, markNotificationAsRead, deleteNotification, type Notification } from "@/lib/backend-notifications"
 import { getTokens } from "@/lib/backend"
@@ -106,7 +115,9 @@ export default function HomePage() {
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false)
 
   // Okat Dashboard States
-  // Removed unused/non-existent dashboard states to resolve 404 errors
+  const [dashboardSummary, setDashboardSummary] = useState<DashboardSummary | null>(null)
+  const [isLoadingDashboard, setIsLoadingDashboard] = useState(false)
+  const [showDashboard, setShowDashboard] = useState(false)
 
   // 케어 로그 다이얼로그 상태
   const [careLogDialogOpen, setCareLogDialogOpen] = useState(false)
@@ -228,7 +239,24 @@ export default function HomePage() {
   useEffect(() => {
     loadMonthlyCare()
   }, [loadMonthlyCare])
-  // Okat Dashboard Data Load removed to resolve 404 errors
+  // Okat Dashboard Data Load
+  const loadDashboardData = useCallback(async () => {
+    if (!activeCatId) return
+
+    setIsLoadingDashboard(true)
+    try {
+      const summary = await fetchDashboardSummary(activeCatId)
+      setDashboardSummary(summary)
+    } catch (error) {
+      console.error('Failed to load dashboard summary:', error)
+    } finally {
+      setIsLoadingDashboard(false)
+    }
+  }, [activeCatId])
+
+  useEffect(() => {
+    loadDashboardData()
+  }, [loadDashboardData])
 
   // 알림 목록 로드
   const loadNotifications = useCallback(async () => {
@@ -278,7 +306,8 @@ export default function HomePage() {
   useEffect(() => {
     let isActive = true
     const nextStamps: Record<string, string> = {}
-    let remaining = stampImages.length
+    const imagesToProcess = [...stampImages, "/stamps/long-cat-sticker.png"]
+    let remaining = imagesToProcess.length
 
     const finalize = () => {
       if (isActive) {
@@ -286,7 +315,7 @@ export default function HomePage() {
       }
     }
 
-    stampImages.forEach((src) => {
+    imagesToProcess.forEach((src) => {
       const img = new Image()
       img.crossOrigin = "anonymous"
       img.onload = () => {
@@ -599,7 +628,13 @@ export default function HomePage() {
     )
   })
 
-  // Dashboard Chart Data logic removed
+  // Dashboard Chart Data
+  const chartConfig = {
+    value: {
+      label: "수치",
+      color: "hsl(var(--primary))",
+    },
+  }
 
   // -------------------------
   
@@ -654,40 +689,75 @@ export default function HomePage() {
         </Card>
 
         {/* 월간 케어 참여 기록 */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-primary" />
-                월간 케어 참여 기록
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 ml-1 text-amber-500 hover:text-amber-600 hover:bg-amber-50/50"
-                  onClick={() => setBenefitDialogOpen(true)}
-                  title="케어 참여 혜택 보기"
-                >
-                  <Gift className="w-5 h-5" />
-                </Button>
+        <Card className="overflow-visible">
+          <CardHeader className="p-0 overflow-visible">
+            <div className="flex items-center justify-between overflow-visible h-10 md:h-14 px-4">
+              <CardTitle className="text-base font-semibold flex items-center gap-2 flex-1 overflow-visible">
+                {(hasCheckInAnswers || !hasTodayRecord) && (
+                  <div className="flex-1 flex justify-center items-center overflow-visible h-full">
+                    <Button
+                      onClick={handleDiagSurveyClick}
+                      className="relative overflow-visible p-0 h-auto w-auto bg-transparent hover:bg-transparent border-none shadow-none active:scale-95 transition-all group -translate-x-1 md:-translate-x-1"
+                      title={hasCheckInAnswers ? "기록 완료" : "오늘의 기록 작성하기"}
+                    >
+                      {/* Bounce Nudge Wrapper */}
+                      <div className={!hasTodayRecord ? "animate-light-bounce" : ""}>
+                        {/* Unified Scale Wrapper */}
+                        <div className="relative transition-all duration-300 group-hover:scale-110 drop-shadow-md group-hover:drop-shadow-xl">
+                          {hasTodayRecord && (
+                            <span className="absolute -inset-1 stamp-sparkle pointer-events-none z-10 opacity-40" aria-hidden="true" />
+                          )}
+                          <img 
+                            src={processedStamps["/stamps/long-cat-sticker.png"] || "/stamps/long-cat-sticker.png"} 
+                            alt="오늘의 기록" 
+                            className="w-auto h-19 md:h-26 object-contain select-none transition-all duration-300"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                          {/* Even Cuter Text Overlay */}
+                          <div className="absolute inset-x-0 bottom-[25%] flex items-center justify-center pointer-events-none">
+                            <span 
+                              className="text-2xl md:text-[57px] text-amber-950 font-bold leading-none drop-shadow-[0_2px_4px_rgba(255,255,255,1)] tracking-tight scale-y-[1.15] origin-bottom"
+                              style={{ fontFamily: 'var(--font-gaegu)' }}
+                            >
+                              {hasTodayRecord ? "기록 완료" : "오늘의 기록"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Button>
+                  </div>
+                )}
               </CardTitle>
-              <div className="flex items-center gap-1">
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={handlePrevMonth}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-xs text-muted-foreground min-w-[80px] text-center">{monthLabel}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={handleNextMonth}
+                    disabled={!canGoNext}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={handlePrevMonth}
+                  className="h-6 px-2 text-[10px] text-amber-500 hover:text-amber-600 hover:bg-amber-50/50 flex items-center gap-1"
+                  onClick={() => setBenefitDialogOpen(true)}
                 >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-xs text-muted-foreground min-w-[80px] text-center">{monthLabel}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={handleNextMonth}
-                  disabled={!canGoNext}
-                >
-                  <ChevronRight className="h-4 w-4" />
+                  <Gift className="w-3.5 h-3.5" />
+                  <span>혜택 보기</span>
                 </Button>
               </div>
             </div>
@@ -716,27 +786,91 @@ export default function HomePage() {
           </CardContent>
         </Card>
 
-        {/* Dashboard Placeholder or additional sections could go here */}
+        {/* 대시보드 그래프 토글 버튼 */}
+        <div className="pt-2">
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => setShowDashboard(!showDashboard)}
+            className={`w-full h-12 flex items-center justify-between px-5 rounded-xl border-primary/20 bg-primary/5 hover:bg-primary/10 hover:border-primary/30 text-primary transition-all duration-300 shadow-sm ${showDashboard ? 'ring-2 ring-primary/20 bg-primary/10' : ''}`}
+          >
+            <div className="flex items-center gap-2.5">
+              <div className={`p-1.5 rounded-lg ${showDashboard ? 'bg-primary text-white' : 'bg-primary/10 text-primary'}`}>
+                <Activity className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-bold">
+                {showDashboard ? "지표 그래프 숨기기" : "식사/음수/배변 지표 그래프 확인하기"}
+              </span>
+            </div>
+            {showDashboard ? (
+              <ChevronRight className="w-5 h-5 rotate-90 opacity-70" />
+            ) : (
+              <ChevronRight className="w-5 h-5 opacity-70" />
+            )}
+          </Button>
+        </div>
+
+        {/* 대시보드 그래프 상단 요약 */}
+        {showDashboard && dashboardSummary && dashboardSummary.metrics.length > 0 && (
+          <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            {dashboardSummary.metrics.map((metric) => (
+              metric.type === 'text' ? (
+                <Card key={metric.id} className="overflow-hidden border-rose-100 bg-rose-50/20">
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-xs font-medium text-muted-foreground flex items-center justify-between">
+                      {metric.label}
+                      <AlertTriangle className={`w-3 h-3 ${metric.value === '이상 없음' ? 'text-muted-foreground/30' : 'text-rose-500'}`} />
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <div className="h-[60px] w-full flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-full bg-rose-100/50 flex items-center justify-center">
+                        <Activity className={`w-4 h-4 ${metric.value === '이상 없음' ? 'text-rose-300' : 'text-rose-500'}`} />
+                      </div>
+                    </div>
+                    <p className={`text-[10px] mt-1 text-center font-bold ${metric.value === '이상 없음' ? 'text-muted-foreground' : 'text-rose-600'}`}>
+                      {metric.value}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card key={metric.id} className="overflow-hidden">
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-xs font-medium text-muted-foreground flex items-center justify-between">
+                      {metric.label}
+                      <Badge variant={metric.changePercent >= 0 ? "secondary" : "outline"} className="text-[10px] h-4 px-1">
+                        {metric.changePercent > 0 ? "+" : ""}{metric.changePercent}%
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <div className="h-[60px] w-full">
+                      <ChartContainer config={chartConfig}>
+                        <LineChart data={metric.chartData}>
+                          <Line
+                            type="monotone"
+                            dataKey="y"
+                            stroke="var(--color-value)"
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                          <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                        </LineChart>
+                      </ChartContainer>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1 text-center font-medium">
+                      {metric.trendLabel}
+                    </p>
+                  </CardContent>
+                </Card>
+              )
+            ))}
+          </div>
+        )}
 
       </main>
 
-      {(hasCheckInAnswers || !hasTodayRecord) && (
-        <Button
-          onClick={handleDiagSurveyClick}
-          className={`fixed bottom-24 right-4 z-40 h-12 rounded-full px-5 shadow-lg ${!hasCheckInAnswers ? "cta-nudge shadow-primary/50" : "bg-muted shadow-lg"}`}
-          aria-label={hasCheckInAnswers ? "기록 완료" : "오늘의 기록"}
-        >
-          <span className="relative inline-flex items-center">
-            <MessageCircle className="w-4 h-4 mr-2" />
-            {hasCheckInAnswers ? "기록 완료" : "오늘의 기록"}
-            {!hasCheckInAnswers && (
-              <span className="cta-badge" aria-hidden="true">
-                !
-              </span>
-            )}
-          </span>
-        </Button>
-      )}
+      {/* floating button removed */}
 
       {/* 기록 수정 확인 팝업 */}
       <AlertDialog open={editConfirmOpen} onOpenChange={setEditConfirmOpen}>

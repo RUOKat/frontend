@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
 import { generateOnboardingQuestions } from "@/lib/questions"
@@ -28,6 +30,7 @@ export default function QuestionsPage() {
   const [answers, setAnswers] = useState<OnboardingAnswers>({})
   const [customText, setCustomText] = useState("")
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [photoCaption, setPhotoCaption] = useState("")
   const [mediaFile, setMediaFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -156,7 +159,7 @@ export default function QuestionsPage() {
           // backend-posts.ts의 uploadImage 사용 (FormData 기반)
           const uploadedUrl = await uploadImage(mediaFile)
           if (uploadedUrl) {
-            await createPost(activeCatId, uploadedUrl, "오늘의 기록 완료! 🐱")
+            await createPost(activeCatId, uploadedUrl, photoCaption.trim() || "오늘의 기록 완료! 🐱")
           }
         } catch (postError) {
           console.error('Failed to create community post:', postError)
@@ -316,6 +319,21 @@ export default function QuestionsPage() {
                   <p className="text-xs text-center text-muted-foreground pt-2">
                     사진이나 영상은 필수는 아니에요. 다음 버튼을 눌러 건너뛸 수 있습니다.
                   </p>
+
+                  {photoPreview && (
+                    <div className="space-y-2 pt-2 animate-in fade-in slide-in-from-top-2 duration-500">
+                      <Label htmlFor="photo-caption" className="text-sm font-semibold text-foreground">
+                        오늘의 기록 설명글
+                      </Label>
+                      <Textarea
+                        id="photo-caption"
+                        placeholder="아이의 오늘을 자유롭게 기록해주세요! (선택 사항)"
+                        value={photoCaption}
+                        onChange={(e) => setPhotoCaption(e.target.value)}
+                        className="min-h-[100px] resize-none border-primary/20 focus-visible:ring-primary/30"
+                      />
+                    </div>
+                  )}
                 </div>
               ) : (
                 // 선택형 질문

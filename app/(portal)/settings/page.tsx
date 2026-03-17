@@ -194,7 +194,7 @@ export default function SettingsPage() {
                     <Bell className="w-4 h-4 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground">이상 신호 알림 받기</p>
+                    <p className="text-sm font-medium text-foreground">오늘의 기록 알림 받기</p>
                   </div>
                 </div>
                 <span className="rounded-full border border-border bg-background px-2 py-1 text-xs font-medium text-foreground">
@@ -202,20 +202,6 @@ export default function SettingsPage() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
-                    <ShieldCheck className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">공동 케어 참여</p>
-                    <p className="text-xs text-muted-foreground">입양 기관과 함께 관리</p>
-                  </div>
-                </div>
-                <span className="rounded-full border border-border bg-background px-2 py-1 text-xs font-medium text-foreground">
-                  {coCareStatusLabel}
-                </span>
-              </div>
 
             </div>
 

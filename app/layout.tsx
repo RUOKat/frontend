@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Noto_Sans_KR } from "next/font/google"
+import { Noto_Sans_KR, Jua, Gaegu } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { SplashGate } from "@/components/app/splash-gate"
 import { AuthProvider } from "@/contexts/auth-context"
@@ -13,6 +13,20 @@ const notoSansKR = Noto_Sans_KR({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   display: "swap",
+})
+
+const jua = Jua({
+  weight: "400",
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-jua",
+})
+
+const gaegu = Gaegu({
+  weight: ["400", "700"],
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-gaegu",
 })
 
 export const metadata: Metadata = {
@@ -36,7 +50,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body className={`${notoSansKR.className} antialiased`}>
+      <body className={`${notoSansKR.className} ${jua.variable} ${gaegu.variable} antialiased`}>
         <WebViewProvider>
           <AuthProvider>
             <ActiveCatProvider>
