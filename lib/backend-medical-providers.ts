@@ -35,7 +35,7 @@ export interface UpdateMedicalProviderData {
 
 // 인증 없이 직접 fetch 호출
 async function fetchWithoutAuth<T>(url: string, options?: RequestInit): Promise<T | null> {
-  const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_BASE_URL ?? "http://192.168.0.140:3001/api"
+  const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_BASE_URL ?? "http://localhost:3001/api"
 
   try {
     const response = await fetch(`${BASE_URL}${url}`, {

@@ -2,7 +2,7 @@
 
 import { clearAllData } from "./storage"
 
-export const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_BASE_URL ?? "http://192.168.0.140:3001/api"
+export const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_BASE_URL ?? "http://localhost:3001/api"
 
 /**
  * Returns the absolute URL for a media file (image/video).
