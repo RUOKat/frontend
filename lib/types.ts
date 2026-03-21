@@ -40,8 +40,8 @@ export interface CatProfile {
   breed: string
   weight: number // kg
   bcs?: number | null // 1-9, null = 모름
-  foodType: "dry" | "wet" | "mixed" | "prescription"
-  waterSource: "fountain" | "bowl" | "mixed"
+  foodType?: "dry" | "wet" | "mixed" | "prescription"
+  waterSource?: "fountain" | "bowl" | "mixed"
   surveyFrequencyPerWeek?: number
   surveyDays?: Weekday[]
 
@@ -161,3 +161,18 @@ export interface VetVisit {
   notes?: string
   createdAt: string
 }
+
+export type EventType = "hospital" | "vaccination" | "checkup" | "other"
+
+export interface CalendarEvent {
+  id: string
+  catId: string
+  title: string
+  date: string // ISO date string (YYYY-MM-DD)
+  type: EventType
+  isNotificationEnabled: boolean
+  notes?: string
+  createdAt: string
+  isCompleted?: boolean
+}
+

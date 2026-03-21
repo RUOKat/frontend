@@ -21,7 +21,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: "/", icon: Home, label: "홈" },
-  { href: "/okat", icon: Cat, label: "Are You Okat?", matchPrefixes: ["/okat", "/reports"] },
+  { href: "/okat", icon: Cat, label: "Meowments", matchPrefixes: ["/okat", "/reports"] },
   { href: "/settings", icon: User, label: "프로필" },
 ]
 
@@ -62,14 +62,20 @@ export function AppShell({ children }: AppShellProps) {
                 onClick={light}
                 className={cn(
                   "flex flex-1 flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-lg transition-colors",
-                  isOkat && "flex-[1.2] gap-1",
+                  isOkat && "flex-[1.2] gap-0",
                   isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <item.icon
-                  className={cn("w-5 h-5", isOkat && "w-6 h-6", isActive && "stroke-[2.5]")}
+                  className={cn("w-6 h-6", isOkat && "w-7 h-7", isActive && "stroke-[2.5]")}
                 />
-                <span className={cn("text-[10px] font-medium leading-none", isOkat && "text-[11px]")}>
+                <span 
+                  className={cn(
+                    "font-bold leading-none", 
+                    isOkat ? "text-[19px] mt-[-8px]" : "text-[15px] mt-[-4px]"
+                  )}
+                  style={{ fontFamily: 'var(--font-gaegu)' }}
+                >
                   {item.label}
                 </span>
               </Link>

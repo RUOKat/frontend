@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { PlusCircle, Loader2, LayoutGrid, List, X } from "lucide-react"
+import { PlusCircle, Loader2, LayoutGrid, List, X, PawPrint, Heart, Cat } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { PostFeedCard } from "@/components/app/post-feed-card"
@@ -48,8 +48,13 @@ export default function OkatPage() {
       {/* Header */}
       <header className="sticky top-0 z-40 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border/50">
         <div className="flex h-14 items-center justify-between px-4 max-w-lg mx-auto">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">
-            Okat Community
+          <h1 
+            className="text-3xl font-bold"
+            style={{ fontFamily: 'var(--font-gaegu)' }}
+          >
+            <span className="bg-gradient-to-r from-amber-900 via-rose-800 to-rose-900 bg-clip-text text-transparent">
+              Meowments
+            </span>
           </h1>
           <div className="flex bg-muted/50 rounded-lg p-0.5">
             <Button
@@ -76,8 +81,10 @@ export default function OkatPage() {
       <main className="pt-4 px-4 sm:px-0 flex flex-col items-center">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">피드를 불러오는 중...</p>
+            <Loader2 className="h-10 w-10 animate-spin text-rose-400 mb-4" />
+            <p className="font-medium text-rose-900/60" style={{ fontFamily: 'var(--font-gaegu)' }}>
+              우리 냥이들 소식 가져오는 중...
+            </p>
           </div>
         ) : (Array.isArray(posts) && posts.length > 0) ? (
           <div className="w-full max-w-lg">
@@ -100,13 +107,17 @@ export default function OkatPage() {
             )}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
-             <div className="w-20 h-20 rounded-full bg-primary/5 flex items-center justify-center mb-2">
-               <Loader2 className="h-10 w-10 text-primary/20" />
+          <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+             <div className="w-24 h-24 rounded-full bg-orange-50/50 flex items-center justify-center mb-2">
+                <Cat className="h-12 w-12 text-rose-900/20" />
              </div>
-             <p className="text-lg font-semibold text-foreground">아직 기록이 없습니다</p>
-             <p className="text-muted-foreground max-w-[250px]">
-               오늘의 기록을 마치고 사진을 올리면<br />여기에 소중한 기록이 나타납니다!
+             <p className="text-2xl font-bold text-amber-950" style={{ fontFamily: 'var(--font-gaegu)' }}>
+               아직 반짝이는 순간이 없어요
+             </p>
+             <p className="text-muted-foreground max-w-[280px] leading-relaxed" style={{ fontFamily: 'var(--font-gaegu)' }}>
+               오늘의 기록을 마치고 사진을 올려주세요!<br />
+               집사님들의 소중한 Meowments가<br />
+               여기에 예쁘게 나타날 거예요 ✨
              </p>
           </div>
         )}

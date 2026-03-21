@@ -15,21 +15,9 @@ import { useActiveCat } from "@/contexts/active-cat-context"
 import { useOnboarding } from "@/contexts/onboarding-context"
 import { catBreeds } from "@/lib/mock"
 import { uploadImage } from "@/lib/backend-uploads"
-import {
-  createEmptyMedicalHistory,
-  getMedicalHistoryGroupMap,
-  getMedicalHistoryItemMap,
-  getMedicalHistoryItemsByGroup,
-  medicalHistoryGroups,
-  normalizeMedicalHistory,
-  sortMedicalHistoryGroupIds,
-  sortMedicalHistoryItemIds,
-  type MedicalHistoryGroupId,
-  type MedicalHistoryItemId,
-  type MedicalHistoryV2,
-} from "@/lib/medical-history"
 import type { AdoptionSource, CatProfile, MedicationSelection, Weekday } from "@/lib/types"
-import { Cat, ChevronDown, ChevronUp, ArrowRight, ArrowLeft, X, Trash2 } from "lucide-react"
+
+import { Cat, ArrowLeft, ArrowRight, Trash2 } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -39,10 +27,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-
-const medicalHistoryGroupMap = getMedicalHistoryGroupMap()
-const medicalHistoryItemMap = getMedicalHistoryItemMap()
-const medicalHistoryItemsByGroup = getMedicalHistoryItemsByGroup()
 
 const adoptionPaths = ["보호소/입양기관", "지인/가족", "길에서 구조", "기타"]
 const agencyAdoptionPath = adoptionPaths[0]
@@ -57,75 +41,6 @@ const weekDays: { value: Weekday; label: string }[] = [
   { value: "sun", label: "일" },
 ]
 const weekDayOrder = weekDays.map((day) => day.value)
-
-type MedicalHistorySignalId = MedicalHistoryGroupId | MedicalHistoryItemId
-
-const medicationRecommendationMap: Partial<Record<MedicalHistorySignalId, string[]>> = {
-  "renal-urinary": ["인결합제", "수액(피하수액)", "구토억제제", "식욕촉진제", "요로 처방식", "오메가3"],
-  diabetes: ["인슐린", "혈당측정", "당뇨 처방식"],
-  hyperthyroidism: ["메티마졸(항갑상선제)"],
-  musculoskeletal: ["관절영양제", "진통제(수의사 처방)"],
-  cardiovascular: ["이뇨제(수의사 처방)", "심장약(수의사 처방)"],
-  oral: ["항생제(수의사 처방)", "소염제(수의사 처방)"],
-  "dermatologic-allergy": ["항생제(수의사 처방)", "소염제(수의사 처방)"],
-}
-
-const medicationCatalog = [
-  "인결합제",
-  "수액(피하수액)",
-  "구토억제제",
-  "식욕촉진제",
-  "요로 처방식",
-  "오메가3",
-  "인슐린",
-  "혈당측정",
-  "당뇨 처방식",
-  "메티마졸(항갑상선제)",
-  "관절영양제",
-  "진통제(수의사 처방)",
-  "이뇨제(수의사 처방)",
-  "심장약(수의사 처방)",
-  "항생제(수의사 처방)",
-  "소염제(수의사 처방)",
-  "위장보호제",
-  "항구토제",
-  "간 보호제",
-  "간 처방식",
-  "프로바이오틱스",
-  "유산균",
-  "스테로이드(수의사 처방)",
-  "항히스타민제",
-  "피부 보습제",
-  "안약",
-  "귀약",
-  "구강 세정제",
-  "치석 제거 보조제",
-  "혈압약(수의사 처방)",
-  "심장 영양제",
-  "칼륨 보충제",
-  "비타민 B군",
-  "철분 보충제",
-  "변비약",
-  "설사약",
-  "구충제",
-  "기생충 예방약",
-  "항산화제",
-  "면역 보조제",
-  "장 보호제",
-  "진정제(수의사 처방)",
-  "항경련제(수의사 처방)",
-  "눈물 관리제",
-  "요로 영양제",
-  "신장 처방식",
-  "치과 처방식",
-  "피부 처방식",
-  "알레르기 처방식",
-  "항곰팡이제(수의사 처방)",
-]
-
-const medicationCatalogUnique = Array.from(new Set(medicationCatalog))
-
-const createMedicationId = (label: string) => label.trim().toLowerCase().replace(/\s+/g, "-")
 
 function resolveAdoptionSource(path: string): AdoptionSource {
   if (path === adoptionPaths[0]) return "shelter"
@@ -145,7 +60,6 @@ export default function CatProfilePage() {
   const router = useRouter()
   const { activeCat, activeCatId, addCat, updateCat, deleteCat, cats } = useActiveCat()
   const { setOnboardingCompleted } = useOnboarding()
-  const [showOptional, setShowOptional] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null)
   const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null)
@@ -160,33 +74,17 @@ export default function CatProfilePage() {
   const [adoptionPath, setAdoptionPath] = useState("")
   const [customAdoptionPath, setCustomAdoptionPath] = useState("")
   const [adoptionAgencyCode, setAdoptionAgencyCode] = useState("")
-  const [unknownBirthday, setUnknownBirthday] = useState(false)
   const [birthDate, setBirthDate] = useState("")
   const [familyDate, setFamilyDate] = useState("")
-  const [estimatedAge, setEstimatedAge] = useState("")
   const [gender, setGender] = useState<"male" | "female" | "">("")
   const [neutered, setNeutered] = useState(true)
   const [breed, setBreed] = useState("")
   const [customBreed, setCustomBreed] = useState("")
   const [weight, setWeight] = useState("")
-  const [foodType, setFoodType] = useState<"dry" | "wet" | "mixed" | "prescription" | "">("")
-  const [waterSource, setWaterSource] = useState<"fountain" | "bowl" | "mixed" | "">("")
   // surveyFrequency와 surveyDays는 고정값 (매일)
   const surveyFrequency = "7"
   const surveyDays: Weekday[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
-  // 선택 필드
-  const [activityLevel, setActivityLevel] = useState<"low" | "medium" | "high" | "">("")
-  const [livingEnvironment, setLivingEnvironment] = useState<"indoor" | "outdoor" | "both" | "">("")
-  const [multiCat, setMultiCat] = useState(false)
-  const [catCount, setCatCount] = useState("")
-  const [mealsPerDay, setMealsPerDay] = useState("")
-  const [waterIntakeTendency, setWaterIntakeTendency] = useState<"low" | "normal" | "high" | "unknown" | "">("")
-  const [medicalHistory, setMedicalHistory] = useState<MedicalHistoryV2>(() => createEmptyMedicalHistory())
-  const [medicationsSelected, setMedicationsSelected] = useState<MedicationSelection[]>([])
-  const [medicationSearchQuery, setMedicationSearchQuery] = useState("")
-  const [notes, setNotes] = useState("")
-  const [vetInfo, setVetInfo] = useState("")
 
   const hasAdoptionPath = true // 필드 제거로 인해 항상 true
   const isAgencyCodeValid = true // 필드 제거로 인해 항상 true
@@ -197,64 +95,9 @@ export default function CatProfilePage() {
     name.trim() &&
     hasAdoptionPath &&
     isAgencyCodeValid &&
-    (unknownBirthday ? estimatedAge : birthDate) &&
     gender &&
     breed &&
-    weight &&
-    foodType &&
-    waterSource
-
-  const selectedGroupIds = medicalHistory.selectedGroupIds
-  const selectedItemIds = medicalHistory.selectedItemIds
-  const selectedGroupSet = new Set(selectedGroupIds)
-  const selectedItemSet = new Set(selectedItemIds)
-  const selectedItemCount = selectedItemIds.length
-  const selectedMedicalSignalIds = new Set<MedicalHistorySignalId>([...selectedGroupIds, ...selectedItemIds])
-
-  const recommendedMedications = Array.from(selectedMedicalSignalIds).reduce<string[]>((acc, conditionId) => {
-    const candidates = medicationRecommendationMap[conditionId] ?? []
-    candidates.forEach((item) => {
-      if (!acc.includes(item)) acc.push(item)
-    })
-    return acc
-  }, [])
-  const selectedMedicationIds = new Set(medicationsSelected.map((item) => item.id))
-  const medicationQuery = medicationSearchQuery.trim()
-  const searchResults =
-    medicationQuery.length >= 2
-      ? medicationCatalogUnique
-        .filter((item) => item.toLowerCase().includes(medicationQuery.toLowerCase()))
-        .filter((item) => !selectedMedicationIds.has(createMedicationId(item)))
-        .slice(0, 8)
-      : []
-
-  const addMedicationSelection = (label: string, source: MedicationSelection["source"]) => {
-    const normalizedLabel = label.trim()
-    if (!normalizedLabel) return
-    const id = createMedicationId(normalizedLabel)
-    if (!id) return
-    setMedicationsSelected((prev) => {
-      if (prev.some((item) => item.id === id)) return prev
-      return [...prev, { id, label: normalizedLabel, source }]
-    })
-  }
-
-  const removeMedicationSelection = (id: string) => {
-    setMedicationsSelected((prev) => prev.filter((item) => item.id !== id))
-  }
-
-  const toggleRecommendedMedication = (label: string) => {
-    const normalizedLabel = label.trim()
-    if (!normalizedLabel) return
-    const id = createMedicationId(normalizedLabel)
-    if (!id) return
-    setMedicationsSelected((prev) => {
-      if (prev.some((item) => item.id === id)) {
-        return prev.filter((item) => item.id !== id)
-      }
-      return [...prev, { id, label: normalizedLabel, source: "recommended" }]
-    })
-  }
+    weight
 
 
   useEffect(() => {
@@ -270,37 +113,18 @@ export default function CatProfilePage() {
     setBreed(breedMatches ? storedBreed : storedBreed ? "기타" : "")
     setCustomBreed(breedMatches ? "" : storedBreed)
 
-    const isUnknownBirthday = Boolean(activeCat.unknownBirthday)
-
     setName(activeCat.name ?? "")
     setAdoptionAgencyCode(activeCat.adoptionAgencyCode ?? activeCat.agencyCode ?? "")
-    setUnknownBirthday(isUnknownBirthday)
-    setBirthDate(isUnknownBirthday ? "" : activeCat.birthDate ?? "")
+    setBirthDate(activeCat.birthDate ?? "")
     setFamilyDate(activeCat.familyDate ?? activeCat.adoptionDate ?? "")
-    setEstimatedAge(isUnknownBirthday && activeCat.estimatedAge != null ? String(activeCat.estimatedAge) : "")
     setGender(activeCat.gender ?? "")
     setNeutered(activeCat.neutered ?? true)
     setWeight(activeCat.weight != null ? String(activeCat.weight) : "")
-    setFoodType(activeCat.foodType ?? "")
-    setWaterSource(activeCat.waterSource ?? "")
     // [주석 처리] surveyFrequency와 surveyDays는 고정값이므로 로드하지 않음
     // setSurveyFrequency(
     //   activeCat.surveyFrequencyPerWeek != null ? String(activeCat.surveyFrequencyPerWeek) : ""
     // )
     // setSurveyDays(activeCat.surveyDays ?? [])
-    setActivityLevel(activeCat.activityLevel ?? "")
-    setLivingEnvironment(activeCat.livingEnvironment ?? "")
-    setMultiCat(Boolean(activeCat.multiCat))
-    setCatCount(activeCat.catCount != null ? String(activeCat.catCount) : "")
-    setMealsPerDay(activeCat.mealsPerDay != null ? String(activeCat.mealsPerDay) : "")
-    setWaterIntakeTendency(activeCat.waterIntakeTendency ?? "")
-    const normalizedMedicalHistory = normalizeMedicalHistory(activeCat.medicalHistory) ?? createEmptyMedicalHistory()
-    setMedicalHistory(normalizedMedicalHistory)
-    const storedMedicationsSelected = activeCat.medicationsSelected ?? []
-    setMedicationsSelected(storedMedicationsSelected)
-    setMedicationSearchQuery("")
-    setNotes(activeCat.notes ?? "")
-    setVetInfo(activeCat.vetInfo ?? "")
     setProfilePhoto(activeCat.profilePhoto ?? null)
   }, [activeCat, isNewCatMode])
 
@@ -342,42 +166,6 @@ export default function CatProfilePage() {
   //   })
   // }
 
-  const toggleMedicalGroup = (groupId: MedicalHistoryGroupId) => {
-    setMedicalHistory((prev) => {
-      const isSelected = prev.selectedGroupIds.includes(groupId)
-      if (isSelected) {
-        const nextGroupIds = prev.selectedGroupIds.filter((id) => id !== groupId)
-        const nextItemIds = prev.selectedItemIds.filter((itemId) => medicalHistoryItemMap[itemId]?.groupId !== groupId)
-        return {
-          ...prev,
-          selectedGroupIds: nextGroupIds,
-          selectedItemIds: nextItemIds,
-        }
-      }
-      const nextGroupIds = sortMedicalHistoryGroupIds([...prev.selectedGroupIds, groupId])
-      return { ...prev, selectedGroupIds: nextGroupIds }
-    })
-  }
-
-  const toggleMedicalItem = (itemId: MedicalHistoryItemId) => {
-    const groupId = medicalHistoryItemMap[itemId]?.groupId
-    setMedicalHistory((prev) => {
-      const isSelected = prev.selectedItemIds.includes(itemId)
-      const nextItemIds = isSelected
-        ? prev.selectedItemIds.filter((id) => id !== itemId)
-        : sortMedicalHistoryItemIds([...prev.selectedItemIds, itemId])
-      const nextGroupIds =
-        groupId && !prev.selectedGroupIds.includes(groupId)
-          ? sortMedicalHistoryGroupIds([...prev.selectedGroupIds, groupId])
-          : prev.selectedGroupIds
-      return { ...prev, selectedGroupIds: nextGroupIds, selectedItemIds: nextItemIds }
-    })
-  }
-
-  const clearMedicalHistory = () => {
-    setMedicalHistory(createEmptyMedicalHistory())
-  }
-
   const handleDelete = async () => {
     if (!activeCat?.id) return
 
@@ -407,21 +195,6 @@ export default function CatProfilePage() {
     setIsSubmitting(true)
     const isCreating = isNewCatMode || cats.length === 0 || !activeCat
     const nextId = isCreating ? createCatId() : activeCat.id ?? activeCatId ?? createCatId()
-    const normalizedSelections = medicationsSelected.reduce<MedicationSelection[]>((acc, item) => {
-      const label = item.label.trim()
-      if (!label) return acc
-      const id = createMedicationId(label)
-      if (!id || acc.some((entry) => entry.id === id)) return acc
-      acc.push({ ...item, id, label })
-      return acc
-    }, [])
-    const medicationsSelectedValue = normalizedSelections
-    const legacyParts = medicationsSelectedValue.map((item) => item.label)
-    const medicationLegacy = Array.from(new Set(legacyParts.map((item) => item.trim()).filter(Boolean))).join(", ")
-    const normalizedMedicalHistory = normalizeMedicalHistory(medicalHistory) ?? createEmptyMedicalHistory()
-    const hasMedicalHistorySelections =
-      normalizedMedicalHistory.selectedGroupIds.length > 0 || normalizedMedicalHistory.selectedItemIds.length > 0
-
     const profile: CatProfile = {
       id: nextId,
       name: name.trim(),
@@ -429,31 +202,22 @@ export default function CatProfilePage() {
       adoptionSource: "other",
       adoptionAgencyCode: undefined,
       agencyCode: undefined,
-      unknownBirthday,
-      birthDate: unknownBirthday ? undefined : birthDate,
+      unknownBirthday: false,
+      birthDate: birthDate || undefined,
       familyDate: familyDate || undefined,
-      estimatedAge: unknownBirthday ? Number.parseInt(estimatedAge, 10) : undefined,
+      estimatedAge: undefined,
       gender: gender as "male" | "female",
       neutered,
       breed: breed === "기타" ? customBreed : breed,
       weight: Number.parseFloat(weight),
-      foodType: foodType as "dry" | "wet" | "mixed" | "prescription",
-      waterSource: waterSource as "fountain" | "bowl" | "mixed",
       surveyFrequencyPerWeek: surveyFrequencyValue || undefined,
       surveyDays: surveyDays.length > 0 ? surveyDays : undefined,
-      activityLevel: activityLevel as "low" | "medium" | "high" | undefined,
-      livingEnvironment: livingEnvironment as "indoor" | "outdoor" | "both" | undefined,
-      multiCat,
-      catCount: multiCat && catCount ? Number.parseInt(catCount, 10) : undefined,
-      mealsPerDay: mealsPerDay ? Number.parseInt(mealsPerDay, 10) : undefined,
-      waterIntakeTendency: waterIntakeTendency as "low" | "normal" | "high" | "unknown" | undefined,
-      medicalHistory: hasMedicalHistorySelections ? normalizedMedicalHistory : undefined,
-      medications: medicationLegacy,
+      medicalHistory: undefined,
+      medications: "",
       medicationText: "",
-      medicationsSelected: medicationsSelectedValue,
-      medicationOtherText: "",
-      notes: notes.trim() || undefined,
-      vetInfo: vetInfo.trim() || undefined,
+      medicationsSelected: [],
+      notes: undefined,
+      vetInfo: undefined,
       profilePhoto: profilePhoto || undefined,
     }
 
@@ -482,43 +246,33 @@ export default function CatProfilePage() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* 헤더 */}
-      <header className="flex-shrink-0 px-6 pt-safe-top">
-        <div className="py-6">
+      <header className="flex-shrink-0 px-4 pt-safe-top">
+        <div className="py-1">
           {/* 뒤로가기 버튼 */}
           {cats.length > 0 && (
             <button
               type="button"
               onClick={() => router.push("/")}
-              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition mb-4"
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition mb-2"
             >
               <ArrowLeft className="w-4 h-4" />
               홈으로
             </button>
           )}
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Cat className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-foreground">우리 고양이 프로필 만들기</h1>
-            </div>
+          <div className="mb-0">
+            <h1 className="text-xl font-black text-foreground">{name || "우리 고양이 프로필 만들기"}</h1>
           </div>
-          <p className="text-sm text-muted-foreground mt-3">기준선을 만들면 작은 변화도 더 빨리 알아챌 수 있어요.</p>
         </div>
       </header>
 
       {/* 폼 */}
-      <main className="flex-1 px-6 pb-24 overflow-auto">
-        <div className="space-y-6">
+      <main className="flex-1 px-4 pb-16 overflow-auto">
+        <div className="space-y-1.5">
           {/* 필수 항목 */}
           <Card>
-            <CardContent className="pt-6 space-y-5">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                필수 항목
-              </div>
-
+            <CardContent className="pt-1.5 space-y-1.5">
               {/* 프로필 사진 */}
+
               <div className="space-y-2">
                 <Label htmlFor="profilePhoto">프로필 사진 (선택)</Label>
                 <div className="flex items-center gap-3">
@@ -534,7 +288,7 @@ export default function CatProfilePage() {
               </div>
 
               {/* 이름 */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="name">이름 <span className="text-destructive">*</span></Label>
                 <Input
                   id="name"
@@ -552,51 +306,17 @@ export default function CatProfilePage() {
 
               {/* 생년월일 */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="birthDate">생년월일 <span className="text-destructive">*</span></Label>
-                  <div className="flex items-center gap-2">
-                    <Switch id="unknownBirthday" checked={unknownBirthday} onCheckedChange={setUnknownBirthday} />
-                    <Label htmlFor="unknownBirthday" className="text-xs text-muted-foreground cursor-pointer">
-                      정확한 생일 몰라요
-                    </Label>
-                  </div>
-                </div>
-                {unknownBirthday ? (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        value={estimatedAge}
-                        onChange={(e) => setEstimatedAge(e.target.value)}
-                        placeholder="추정 나이"
-                        min={1}
-                        max={300}
-                        className={showValidation && !estimatedAge ? "border-destructive ring-destructive" : ""}
-                      />
-                      <span className="text-sm text-muted-foreground whitespace-nowrap">개월</span>
-                    </div>
-                    {showValidation && !estimatedAge && (
-                      <p className="text-xs text-destructive">추정 나이를 입력해 주세요.</p>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <Input
-                      type="date"
-                      id="birthDate"
-                      value={birthDate}
-                      onChange={(e) => setBirthDate(e.target.value)}
-                      className={showValidation && !birthDate ? "border-destructive ring-destructive" : ""}
-                    />
-                    {showValidation && !birthDate && (
-                      <p className="text-xs text-destructive">생년월일을 입력해 주세요.</p>
-                    )}
-                  </>
-                )}
+                <Label htmlFor="birthDate">생년월일</Label>
+                <Input
+                  type="date"
+                  id="birthDate"
+                  value={birthDate}
+                  onChange={(e) => setBirthDate(e.target.value)}
+                />
               </div>
 
               {/* 가족이 된 날 */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="familyDate">가족이 된 날</Label>
                 <Input
                   type="date"
@@ -607,7 +327,7 @@ export default function CatProfilePage() {
               </div>
 
               {/* 성별 */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label>성별 <span className="text-destructive">*</span></Label>
                 <div className={`flex gap-2 ${showValidation && !gender ? "rounded-md ring-2 ring-destructive p-1 -m-1" : ""}`}>
                   <Button
@@ -641,7 +361,7 @@ export default function CatProfilePage() {
               </div>
 
               {/* 품종 */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label>품종 <span className="text-destructive">*</span></Label>
                 <Select value={breed} onValueChange={setBreed}>
                   <SelectTrigger className={showValidation && !breed ? "border-destructive ring-destructive" : ""}>
@@ -669,7 +389,7 @@ export default function CatProfilePage() {
               </div>
 
               {/* 체중 */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="weight">체중 <span className="text-destructive">*</span></Label>
                 <div className="flex items-center gap-2">
                   <Input
@@ -690,68 +410,7 @@ export default function CatProfilePage() {
                 )}
               </div>
 
-              {/* 사료 타입 */}
-              <div className="space-y-2">
-                <Label>사료 타입 <span className="text-destructive">*</span></Label>
-                <div className={`grid grid-cols-2 gap-2 ${showValidation && !foodType ? "rounded-md ring-2 ring-destructive p-1 -m-1" : ""}`}>
-                  {[
-                    { value: "dry", label: "건식" },
-                    { value: "wet", label: "습식" },
-                    { value: "mixed", label: "혼합" },
-                    { value: "prescription", label: "처방식" },
-                  ].map((option) => (
-                    <Button
-                      key={option.value}
-                      type="button"
-                      variant={foodType === option.value ? "default" : "outline"}
-                      className={foodType !== option.value ? "bg-transparent" : ""}
-                      onClick={() => setFoodType(option.value as typeof foodType)}
-                      size="sm"
-                    >
-                      {option.label}
-                    </Button>
-                  ))}
-                </div>
-                {showValidation && !foodType && (
-                  <p className="text-xs text-destructive">사료 타입을 선택해 주세요.</p>
-                )}
-              </div>
 
-              {/* 급수 방식 */}
-              <div className="space-y-2">
-                <Label>급수 방식 <span className="text-destructive">*</span></Label>
-                <div className={`grid grid-cols-3 gap-2 ${showValidation && !waterSource ? "rounded-md ring-2 ring-destructive p-1 -m-1" : ""}`}>
-                  {[
-                    { value: "fountain", label: "정수기" },
-                    { value: "bowl", label: "그릇" },
-                    { value: "mixed", label: "혼합" },
-                  ].map((option) => (
-                    <Button
-                      key={option.value}
-                      type="button"
-                      variant={waterSource === option.value ? "default" : "outline"}
-                      className={waterSource !== option.value ? "bg-transparent" : ""}
-                      onClick={() => setWaterSource(option.value as typeof waterSource)}
-                      size="sm"
-                    >
-                      {option.label}
-                    </Button>
-                  ))}
-                </div>
-                {showValidation && !waterSource && (
-                  <p className="text-xs text-destructive">급수 방식을 선택해 주세요.</p>
-                )}
-              </div>
-
-              {/* 진단 설문 일정 */}
-              {/* 진단 설문 빈도 - 매일 고정 (표시만) */}
-              <div className="space-y-2">
-                <Label>진단 설문 빈도</Label>
-                <div className="px-3 py-2 bg-muted/50 rounded-md text-sm text-muted-foreground">
-                  매일 (월~일)
-                </div>
-                <p className="text-xs text-muted-foreground">진단 설문은 매일 진행됩니다.</p>
-              </div>
 
               {/* [주석 처리] 설문 빈도 선택 UI - 현재 매일 고정이므로 사용하지 않음
               <div className="space-y-2">
@@ -813,349 +472,27 @@ export default function CatProfilePage() {
             </CardContent>
           </Card>
 
-          {/* 선택 항목 토글 */}
-          <button
-            type="button"
-            onClick={() => setShowOptional(!showOptional)}
-            className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 rounded-lg text-sm"
-          >
-            <span className="text-muted-foreground">선택 항목 (더 정확한 분석을 위해)</span>
-            {showOptional ? (
-              <ChevronUp className="w-4 h-4 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            )}
-          </button>
 
-          {/* 선택 항목 */}
-          {showOptional && (
-            <Card>
-              <CardContent className="pt-6 space-y-5">
-                {/* 활동 성향 */}
-                <div className="space-y-2">
-                  <Label>활동 성향</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { value: "low", label: "조용함" },
-                      { value: "medium", label: "보통" },
-                      { value: "high", label: "활발함" },
-                    ].map((option) => (
-                      <Button
-                        key={option.value}
-                        type="button"
-                        variant={activityLevel === option.value ? "default" : "outline"}
-                        className={activityLevel !== option.value ? "bg-transparent" : ""}
-                        onClick={() => setActivityLevel(option.value as typeof activityLevel)}
-                        size="sm"
-                      >
-                        {option.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 실내/실외 */}
-                <div className="space-y-2">
-                  <Label>생활 환경</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { value: "indoor", label: "실내" },
-                      { value: "outdoor", label: "실외" },
-                      { value: "both", label: "혼합" },
-                    ].map((option) => (
-                      <Button
-                        key={option.value}
-                        type="button"
-                        variant={livingEnvironment === option.value ? "default" : "outline"}
-                        className={livingEnvironment !== option.value ? "bg-transparent" : ""}
-                        onClick={() => setLivingEnvironment(option.value as typeof livingEnvironment)}
-                        size="sm"
-                      >
-                        {option.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 다묘 여부 */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="multiCat">다묘 가정</Label>
-                    <Switch id="multiCat" checked={multiCat} onCheckedChange={setMultiCat} />
-                  </div>
-                  {multiCat && (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        value={catCount}
-                        onChange={(e) => setCatCount(e.target.value)}
-                        placeholder="총 마릿수"
-                        min={2}
-                        max={20}
-                      />
-                      <span className="text-sm text-muted-foreground whitespace-nowrap">마리</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* 식사 횟수 */}
-                <div className="space-y-2">
-                  <Label htmlFor="mealsPerDay">하루 식사 횟수</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="mealsPerDay"
-                      type="number"
-                      value={mealsPerDay}
-                      onChange={(e) => setMealsPerDay(e.target.value)}
-                      placeholder="횟수"
-                      min={1}
-                      max={10}
-                    />
-                    <span className="text-sm text-muted-foreground whitespace-nowrap">회</span>
-                  </div>
-                </div>
-
-                {/* 물 섭취 경향 */}
-                <div className="space-y-2">
-                  <Label>물 섭취 경향</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { value: "low", label: "적게 마심" },
-                      { value: "normal", label: "보통" },
-                      { value: "high", label: "많이 마심" },
-                      { value: "unknown", label: "모름" },
-                    ].map((option) => (
-                      <Button
-                        key={option.value}
-                        type="button"
-                        variant={waterIntakeTendency === option.value ? "default" : "outline"}
-                        className={waterIntakeTendency !== option.value ? "bg-transparent" : ""}
-                        onClick={() => setWaterIntakeTendency(option.value as typeof waterIntakeTendency)}
-                        size="sm"
-                      >
-                        {option.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 기존 병력 */}
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <Label>기존 병력 (해당하는 것 모두 선택)</Label>
-                    <span className="text-xs text-muted-foreground">선택됨 {selectedItemCount}개</span>
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">1단계. 해당하는 질환군을 먼저 선택하세요.</p>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {medicalHistoryGroups.map((group) => {
-                        const isSelected = selectedGroupSet.has(group.id)
-                        return (
-                          <button
-                            key={group.id}
-                            type="button"
-                            onClick={() => toggleMedicalGroup(group.id)}
-                            className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${isSelected
-                              ? "border-primary bg-primary/10 text-primary"
-                              : "border-border bg-background text-foreground"
-                              }`}
-                            aria-pressed={isSelected}
-                          >
-                            {group.label}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button type="button" variant="outline" size="sm" onClick={clearMedicalHistory}>
-                      모르겠어요/없어요
-                    </Button>
-                    <span className="text-xs text-muted-foreground">선택이 어려우면 비워둘 수 있어요.</span>
-                  </div>
-
-                  {selectedGroupIds.length > 0 && (
-                    <div className="space-y-3">
-                      <p className="text-xs text-muted-foreground">2단계. 선택한 질환군에서 세부 항목을 체크하세요.</p>
-                      {selectedGroupIds.map((groupId) => {
-                        const group = medicalHistoryGroupMap[groupId]
-                        const items = medicalHistoryItemsByGroup[groupId] ?? []
-                        const selectedCount = items.filter((item) => selectedItemSet.has(item.id)).length
-                        return (
-                          <div key={groupId} className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <span className="text-sm font-medium text-foreground">{group.label}</span>
-                              <span className="text-xs text-muted-foreground">선택 {selectedCount}개</span>
-                            </div>
-                            <div className="space-y-3">
-                              {items.map((item) => {
-                                const checkboxId = `medical-history-${item.id}`
-                                return (
-                                  <div key={item.id} className="flex items-start gap-3">
-                                    <Checkbox
-                                      id={checkboxId}
-                                      checked={selectedItemSet.has(item.id)}
-                                      onCheckedChange={() => toggleMedicalItem(item.id)}
-                                    />
-                                    <div className="space-y-1">
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        <Label htmlFor={checkboxId} className="text-sm font-medium leading-relaxed">
-                                          {item.label}
-                                        </Label>
-                                        <Badge
-                                          variant={item.type === "symptom" ? "outline" : "secondary"}
-                                          className="text-[10px]"
-                                        >
-                                          {item.type === "symptom" ? "증상군" : "질환"}
-                                        </Badge>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* 복용 약/영양제 */}
-                <div className="space-y-3">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <Label htmlFor="medicationSearch">복용 중인 약/영양제</Label>
-                    <div className="w-full sm:max-w-[220px]">
-                      <Input
-                        id="medicationSearch"
-                        value={medicationSearchQuery}
-                        onChange={(e) => {
-                          setMedicationSearchQuery(e.target.value)
-                        }}
-                        placeholder="2글자 이상 입력"
-                      />
-                    </div>
-                  </div>
-
-                  {searchResults.length > 0 && (
-                    <div className="sm:ml-auto sm:max-w-[220px]">
-                      <div className="rounded-md border border-border bg-background p-2 shadow-sm">
-                        <div className="space-y-1">
-                          {searchResults.map((item) => (
-                            <button
-                              key={item}
-                              type="button"
-                              onClick={() => {
-                                addMedicationSelection(item, "search")
-                                setMedicationSearchQuery("")
-                              }}
-                              className="flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-sm hover:bg-muted/50"
-                            >
-                              <span>{item}</span>
-                              <span className="text-[10px] text-muted-foreground">추가</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    {recommendedMedications.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {recommendedMedications.map((item) => {
-                          const isSelected = selectedMedicationIds.has(createMedicationId(item))
-                          return (
-                            <Button
-                              key={item}
-                              type="button"
-                              variant={isSelected ? "default" : "outline"}
-                              className={!isSelected ? "bg-transparent" : ""}
-                              onClick={() => toggleRecommendedMedication(item)}
-                              size="sm"
-                            >
-                              {item}
-                            </Button>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  {medicationsSelected.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {medicationsSelected.map((item) => (
-                        <span
-                          key={item.id}
-                          className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-1 text-xs text-foreground"
-                        >
-                          {item.label}
-                          <button
-                            type="button"
-                            onClick={() => removeMedicationSelection(item.id)}
-                            className="text-muted-foreground hover:text-foreground"
-                            aria-label={`${item.label} 제거`}
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                </div>
-
-                {/* 메모 */}
-                <div className="space-y-2">
-                  <Label htmlFor="notes">메모</Label>
-                  <Textarea
-                    id="notes"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="특이사항이 있다면 적어주세요"
-                    rows={2}
-                  />
-                </div>
-
-                {/* 병원 정보 */}
-                <div className="space-y-2">
-                  <Label htmlFor="vetInfo">단골 병원</Label>
-                  <Input
-                    id="vetInfo"
-                    value={vetInfo}
-                    onChange={(e) => setVetInfo(e.target.value)}
-                    placeholder="예: OO동물병원"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* 고양이 삭제 - 별도 섹션 */}
+          {/* 고양이 삭제 - Minimalist layout */}
           {!isNewCatMode && activeCat && (
-            <Card className="border-destructive/20">
-              <CardContent className="py-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-                  onClick={() => setIsDeleteOpen(true)}
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  이 고양이 프로필 삭제
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+            <div className="flex flex-col items-center gap-1 pt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-destructive/70 hover:text-destructive hover:bg-destructive/5 h-7 text-[13px] px-3"
+                onClick={() => setIsDeleteOpen(true)}
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                이 고양이 프로필 삭제
+              </Button>
 
-          {/* Cat ID */}
-          {!isNewCatMode && activeCat?.id && (
-            <p className="text-[10px] text-muted-foreground/50 text-center select-all">
-              ID: {activeCat.id}
-            </p>
+              {activeCat?.id && (
+                <p className="text-[9px] text-muted-foreground/40 select-all">
+                  ID: {activeCat.id}
+                </p>
+              )}
+            </div>
           )}
         </div>
       </main>
@@ -1172,8 +509,9 @@ export default function CatProfilePage() {
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{activeCat?.name}의 프로필을 삭제할까요?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-center">{activeCat?.name}의 프로필을 삭제할까요?</AlertDialogTitle>
+
+            <AlertDialogDescription className="text-center">
               삭제하면 이 고양이의 모든 기록이 사라지며 복구할 수 없어요.
             </AlertDialogDescription>
           </AlertDialogHeader>

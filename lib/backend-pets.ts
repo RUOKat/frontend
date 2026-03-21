@@ -40,6 +40,13 @@ function cleanProfileForBackend(profile: CatProfile): Partial<CatProfile> {
     }
   }
 
+  // 삭제된 UI 항목들에 대해 백엔드가 필수로 요구할 가능성이 있는 필드 기본값 주입
+  if (!result.foodType) result.foodType = "mixed"
+  if (!result.waterSource) result.waterSource = "mixed"
+  if (!result.activityLevel) result.activityLevel = "medium"
+  if (!result.livingEnvironment) result.livingEnvironment = "indoor"
+  if (!result.waterIntakeTendency) result.waterIntakeTendency = "unknown"
+
   return result as Partial<CatProfile>
 }
 

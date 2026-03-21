@@ -131,6 +131,8 @@ export interface CareLog {
   petId: string;
   date: string;
   type: string;
+  imageUrl?: string;
+  videoUrl?: string;
   questions?: any;
   answers?: Record<string, string>;
   diagQuestions?: any;

@@ -341,34 +341,32 @@ export default function QuestionsPage() {
                   {currentQuestion.options.map((option) => {
                     const isSelected = answers[currentQuestion.id] === option.value || answers[currentQuestion.id]?.startsWith(`${option.value}:`);
                     return (
-                      <div key={option.value} className="space-y-2">
-                        <button
-                          type="button"
-                          onClick={() => handleAnswer(option.value)}
-                          className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
-                            isSelected
-                              ? "border-primary bg-primary/5"
-                              : "border-border bg-card hover:border-primary/50"
-                          }`}
-                        >
-                          <span
-                            className={`font-medium ${isSelected ? "text-primary" : "text-foreground"}`}
+                      <div key={option.value}>
+                        {option.value === "other" && isSelected ? (
+                          <Input
+                            type="text"
+                            placeholder="어떤 증상이었는지 알려주세요"
+                            value={customText}
+                            onChange={(e) => handleCustomTextChange(e.target.value)}
+                            autoFocus
+                            className="w-full h-14 px-4 rounded-xl border-2 text-left border-primary bg-primary/5 focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground font-medium placeholder:text-muted-foreground"
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleAnswer(option.value)}
+                            className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                              isSelected
+                                ? "border-primary bg-primary/5"
+                                : "border-border bg-card hover:border-primary/50"
+                            }`}
                           >
-                            {option.label}
-                          </span>
-                        </button>
-                        {/* 'other' 선택 시 노출되는 입력 필드 */}
-                        {option.value === "other" && isSelected && (
-                          <div className="pl-4 pr-1 mt-1">
-                            <Input
-                              type="text"
-                              placeholder="어떤 증상이었는지 알려주세요"
-                              value={customText}
-                              onChange={(e) => handleCustomTextChange(e.target.value)}
-                              autoFocus
-                              className="w-full"
-                            />
-                          </div>
+                            <span
+                              className={`font-medium ${isSelected ? "text-foreground" : "text-foreground"}`}
+                            >
+                              {option.label}
+                            </span>
+                          </button>
                         )}
                       </div>
                     );

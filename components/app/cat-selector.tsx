@@ -10,6 +10,7 @@ import { useActiveCat } from "@/contexts/active-cat-context"
 import type { CatProfile } from "@/lib/types"
 import { getMediaUrl } from "@/lib/backend"
 import { Cat, Check, ChevronDown, PlusCircle, Pencil } from "lucide-react"
+import { differenceInDays, differenceInMonths, differenceInYears, addYears, isBefore, startOfDay } from "date-fns"
 
 type DateParts = {
   year: number
@@ -96,37 +97,58 @@ export function CatSelector({ embedded = false, primaryAction = "select" }: CatS
   const canOpen = !isLoading
 
   const detailLine = useMemo(() => {
-    if (!activeCat) return ""
-    const parts = [
-      activeCat.breed,
-      activeCat.gender ? (activeCat.gender === "male" ? "수컷" : "암컷") : null,
-      activeCat.neutered == null ? null : activeCat.neutered ? "중성화 완료" : "중성화 전",
-    ].filter(Boolean)
-    return parts.join(" · ")
-  }, [activeCat])
+    return ""
+  }, [])
 
   const birthdayLine = useMemo(() => {
-    if (!activeCat) return ""
-    const birthDateLabel = formatDateLabel(activeCat.birthDate)
-    const hasExactBirthDate = Boolean(birthDateLabel) && !activeCat.unknownBirthday
-    const estimatedParts =
-      !hasExactBirthDate && activeCat.estimatedAge != null ? getAgePartsFromMonths(activeCat.estimatedAge) : null
-    const estimatedLabel = estimatedParts ? formatAgeParts(estimatedParts) : ""
-    let baseLabel = ""
-    if (hasExactBirthDate) {
-      baseLabel = `🎂 태어난 날 ${birthDateLabel}`
-    } else if (estimatedLabel) {
-      baseLabel = `🎂 태어난 날 미상 (추정 ${estimatedLabel})`
-    } else {
-      baseLabel = "🎂 태어난 날 정보 없음"
+    if (!activeCat?.birthDate) return "🎂 태어난 날 정보 없음"
+    
+    const birthDate = new Date(activeCat.birthDate)
+    if (isNaN(birthDate.getTime())) return "🎂 태어난 날 정보 없음"
+    
+    const now = startOfDay(new Date())
+    const birth = startOfDay(birthDate)
+    
+    // 나이 계산 (살, 개월)
+    const ageYears = differenceInYears(now, birth)
+    const ageMonths = differenceInMonths(now, addYears(birth, ageYears))
+    
+    // 다음 생일 계산
+    let nextBirthday = addYears(birth, ageYears + 1)
+    // 만약 오늘이 생일이면? 또는 이미 지났으면? (differenceInYears가 이미 처리하겠지만 확실히 하기 위해)
+    if (isBefore(nextBirthday, now)) {
+      nextBirthday = addYears(nextBirthday, 1)
     }
-    return baseLabel
+    const daysToBirthday = differenceInDays(nextBirthday, now)
+    
+    const ageLabel = ageYears > 0 
+      ? `${ageYears}살 ${ageMonths}개월` 
+      : `${ageMonths}개월`
+      
+    // 생일 당일인 경우 특별 처리 (선택 사항이지만 유용함)
+    const birthdayStatus = daysToBirthday === 0 || (now.getMonth() === birth.getMonth() && now.getDate() === birth.getDate())
+      ? "오늘 생일이에요! 🎉"
+      : `생일까지 ${daysToBirthday}일`
+
+    const dateLabel = formatDateLabel(activeCat.birthDate)
+    return `🎂 태어난 날 ${dateLabel} · ${birthdayStatus}`
   }, [activeCat])
 
   const familyLine = useMemo(() => {
     if (!activeCat) return ""
-    const familyDateLabel = formatDateLabel(activeCat.familyDate ?? activeCat.adoptionDate)
-    return familyDateLabel ? `🏠 가족이 된 날 ${familyDateLabel}` : "🏠 가족이 된 날 정보 없음"
+    const dateStr = activeCat.familyDate || activeCat.adoptionDate
+    if (!dateStr) return "🏠 가족이 된 날 정보 없음"
+    
+    const familyDate = new Date(dateStr)
+    if (isNaN(familyDate.getTime())) return "🏠 가족이 된 날 정보 없음"
+    
+    const now = startOfDay(new Date())
+    const start = startOfDay(familyDate)
+    
+    const daysTogether = differenceInDays(now, start) + 1 // 당일부터 1일로 계산하는 것이 일반적
+    
+    const dateLabel = formatDateLabel(dateStr)
+    return `🏠 가족이 된 날 ${dateLabel} ${activeCat.name}와 함께한 지 ${daysTogether}일`
   }, [activeCat])
 
   const careShareLine = useMemo(() => {
@@ -179,12 +201,13 @@ export function CatSelector({ embedded = false, primaryAction = "select" }: CatS
   }
 
   const headerClassName = embedded ? "px-0 pb-0 gap-1" : "pb-3"
-  const contentClassName = embedded ? "px-0 mt-6" : ""
+  const contentClassName = embedded ? "px-0 mt-0" : ""
   const rowClassName = embedded
     ? "flex-1 min-w-0 flex items-center gap-2 text-left"
     : "flex-1 min-w-0 flex items-center gap-4 text-left"
-  const avatarClassName =
-    "w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden"
+  const avatarClassName = embedded
+    ? "w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden shrink-0"
+    : "w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden shrink-0"
 
   if (isLoading) {
     const loadingContent = (
@@ -214,10 +237,12 @@ export function CatSelector({ embedded = false, primaryAction = "select" }: CatS
   const selectorContent = (
     <>
       <CardHeader className={headerClassName}>
-        <CardTitle className="text-2xl font-semibold flex items-center gap-2">
-          <Cat className="w-5 h-5 text-primary" />
-          {activeCat?.name || "고양이"}
-        </CardTitle>
+        <div className="w-full">
+          <CardTitle className={`${embedded ? "text-xl" : "text-2xl"} font-black flex items-center`}>
+            {activeCat?.name || "고양이"}
+          </CardTitle>
+          {embedded && <div className="border-b border-border/70 w-full mt-1 mb-2" />}
+        </div>
       </CardHeader>
       <CardContent className={contentClassName}>
         <div className="w-full flex items-center gap-1">
@@ -239,22 +264,20 @@ export function CatSelector({ embedded = false, primaryAction = "select" }: CatS
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <Cat className="w-8 h-8 text-primary" />
+                <Cat className={embedded ? "w-10 h-10 text-primary" : "w-8 h-8 text-primary"} />
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              {detailLine ? (
-                <p className="text-sm font-medium text-foreground truncate">{detailLine}</p>
-              ) : (
-                <p className="text-sm text-muted-foreground">기본 정보 없음</p>
+            <div className={`flex-1 min-w-0 flex flex-col justify-center ${embedded ? "gap-1" : ""}`}>
+              {detailLine && (
+                <p className={`${embedded ? "text-base" : "text-sm"} font-bold text-foreground truncate`}>{detailLine}</p>
               )}
               {birthdayLine ? (
-                <p className="text-xs text-muted-foreground">{birthdayLine}</p>
+                <p className={`${embedded ? "text-sm" : "text-xs"} text-muted-foreground`}>{birthdayLine}</p>
               ) : (
-                <p className="text-xs text-muted-foreground">🎂 태어난 날 정보 없음</p>
+                <p className={`${embedded ? "text-sm" : "text-xs"} text-muted-foreground`}>🎂 태어난 날 정보 없음</p>
               )}
-              {familyLine ? <p className="text-xs text-muted-foreground">{familyLine}</p> : null}
-              {careShareLine ? <p className="text-xs text-muted-foreground">{careShareLine}</p> : null}
+              {familyLine ? <p className={`${embedded ? "text-sm" : "text-xs"} text-muted-foreground`}>{familyLine}</p> : null}
+              {careShareLine ? <p className={`${embedded ? "text-sm" : "text-xs"} text-muted-foreground`}>{careShareLine}</p> : null}
             </div>
             {primaryAction === "edit" && (
               <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted/50 hover:bg-muted transition">
@@ -311,7 +334,7 @@ export function CatSelector({ embedded = false, primaryAction = "select" }: CatS
                 <button
                   key={cat.id}
                   type="button"
-                  onClick={() => handleSelect(cat.id)}
+                  onClick={() => handleSelect(cat.id || "")}
                   className={`w-full flex items-center gap-3 rounded-lg border border-border px-3 py-2 text-left hover:bg-muted/50 transition ${backgroundClass}`}
                 >
                   <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden">
