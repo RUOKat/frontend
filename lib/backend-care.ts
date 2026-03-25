@@ -262,7 +262,6 @@ export async function fetchMonthlyStats(
 }
 */
 
-/*
 export interface DailyReport {
   id: string;
   date: string;
@@ -272,12 +271,10 @@ export interface DailyReport {
   fullReport: string;
   createdAt: string;
 }
-*/
 
 /**
  * 일일 리포트 조회 - 백엔드 미구현으로 비활성화 (404 방지)
  */
-/*
 export async function fetchDailyReports(petId: string): Promise<DailyReport[]> {
   const response = await backendFetch<any>(
     `/care/${petId}/daily-reports`,
@@ -300,7 +297,6 @@ export async function fetchDailyReports(petId: string): Promise<DailyReport[]> {
 
   return [];
 }
-*/
 
 /*
 export interface HealthContext {
