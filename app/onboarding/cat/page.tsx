@@ -311,7 +311,17 @@ export default function CatProfilePage() {
                   type="date"
                   id="birthDate"
                   value={birthDate}
-                  onChange={(e) => setBirthDate(e.target.value)}
+                  max="9999-12-31"
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (val.split("-")[0]?.length > 4) {
+                      const parts = val.split("-")
+                      parts[0] = parts[0].slice(0, 4)
+                      setBirthDate(parts.join("-"))
+                    } else {
+                      setBirthDate(val)
+                    }
+                  }}
                 />
               </div>
 
@@ -322,7 +332,17 @@ export default function CatProfilePage() {
                   type="date"
                   id="familyDate"
                   value={familyDate}
-                  onChange={(e) => setFamilyDate(e.target.value)}
+                  max="9999-12-31"
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (val.split("-")[0]?.length > 4) {
+                      const parts = val.split("-")
+                      parts[0] = parts[0].slice(0, 4)
+                      setFamilyDate(parts.join("-"))
+                    } else {
+                      setFamilyDate(val)
+                    }
+                  }}
                 />
               </div>
 

@@ -203,32 +203,7 @@ export default function QuestionsPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* 헤더 */}
-      <header className="flex-shrink-0 px-6 pt-safe-top">
-        <div className="py-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <MessageCircle className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-foreground">몇 가지만 더 물어볼게요</h1>
-              <p className="text-xs text-muted-foreground">맞춤 설문</p>
-            </div>
-          </div>
-          <p className="text-sm text-muted-foreground">기본정보를 바탕으로, 우리 아이에게 중요한 신호만 골랐어요.</p>
-        </div>
-
-        {/* 진행률 */}
-        <div className="space-y-2 pb-4">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>
-              {currentIndex + 1} / {questions.length}
-            </span>
-            <span>{Math.round(progress)}%</span>
-          </div>
-          <Progress value={progress} className="h-1.5" />
-        </div>
-      </header>
+      <header className="flex-shrink-0 px-6 pt-safe-top h-8" />
 
       {/* 질문 */}
       <main className="flex-1 px-6 pb-24">
@@ -236,11 +211,22 @@ export default function QuestionsPage() {
           <CardContent className="p-0 space-y-6">
             {/* 질문 텍스트 */}
             <div className="space-y-3">
-              <h2 className="text-lg font-semibold text-foreground leading-relaxed">{currentQuestion.text}</h2>
-              <div className="flex items-start gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
-                <HelpCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                <span>{currentQuestion.description}</span>
-              </div>
+              <h2 className="text-lg font-semibold text-foreground leading-relaxed">
+                {currentQuestion.text.includes("(선택사항)") ? (
+                  <>
+                    {currentQuestion.text.split("(선택사항)")[0]}
+                    <span className="text-sm font-normal text-muted-foreground ml-1">(선택사항)</span>
+                  </>
+                ) : (
+                  currentQuestion.text
+                )}
+              </h2>
+              {currentQuestion.description && (
+                <div className="flex items-start gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
+                  <HelpCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>{currentQuestion.description}</span>
+                </div>
+              )}
             </div>
 
             {/* 선택지 또는 숫자 입력 */}
@@ -316,18 +302,12 @@ export default function QuestionsPage() {
                       />
                     </label>
                   )}
-                  <p className="text-xs text-center text-muted-foreground pt-2">
-                    사진이나 영상은 필수는 아니에요. 다음 버튼을 눌러 건너뛸 수 있습니다.
-                  </p>
 
                   {photoPreview && (
                     <div className="space-y-2 pt-2 animate-in fade-in slide-in-from-top-2 duration-500">
-                      <Label htmlFor="photo-caption" className="text-sm font-semibold text-foreground">
-                        오늘의 기록 설명글
-                      </Label>
                       <Textarea
                         id="photo-caption"
-                        placeholder="아이의 오늘을 자유롭게 기록해주세요! (선택 사항)"
+                        placeholder="사진/영상을 간략하게 설명해주세요!(선택사항)"
                         value={photoCaption}
                         onChange={(e) => setPhotoCaption(e.target.value)}
                         className="min-h-[100px] resize-none border-primary/20 focus-visible:ring-primary/30"
@@ -379,7 +359,8 @@ export default function QuestionsPage() {
       </main>
 
       {/* 하단 네비게이션 */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border safe-area-bottom">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border safe-area-bottom space-y-4">
+        <Progress value={progress} className="h-1" />
         <div className="flex gap-3">
           <Button
             variant="outline"

@@ -82,8 +82,9 @@
 }
 
 @theme inline {
-  /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
   --font-sans: "Noto Sans KR", "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-jua: var(--font-jua);
+  --font-gaegu: var(--font-gaegu);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

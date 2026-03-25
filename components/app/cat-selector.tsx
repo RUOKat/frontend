@@ -131,7 +131,10 @@ export function CatSelector({ embedded = false, primaryAction = "select" }: CatS
       : `생일까지 ${daysToBirthday}일`
 
     const dateLabel = formatDateLabel(activeCat.birthDate)
-    return `🎂 태어난 날 ${dateLabel} · ${birthdayStatus}`
+    return {
+      dateLabel: `🎂 태어난 날 ${dateLabel}`,
+      statusLabel: birthdayStatus,
+    }
   }, [activeCat])
 
   const familyLine = useMemo(() => {
@@ -148,7 +151,10 @@ export function CatSelector({ embedded = false, primaryAction = "select" }: CatS
     const daysTogether = differenceInDays(now, start) + 1 // 당일부터 1일로 계산하는 것이 일반적
     
     const dateLabel = formatDateLabel(dateStr)
-    return `🏠 가족이 된 날 ${dateLabel} ${activeCat.name}와 함께한 지 ${daysTogether}일`
+    return {
+      dateLabel: `🏠 가족이 된 날 ${dateLabel}`,
+      statusLabel: `${activeCat.name}와 함께한 지 ${daysTogether}일`,
+    }
   }, [activeCat])
 
   const careShareLine = useMemo(() => {
@@ -271,12 +277,20 @@ export function CatSelector({ embedded = false, primaryAction = "select" }: CatS
               {detailLine && (
                 <p className={`${embedded ? "text-base" : "text-sm"} font-bold text-foreground truncate`}>{detailLine}</p>
               )}
-              {birthdayLine ? (
-                <p className={`${embedded ? "text-sm" : "text-xs"} text-muted-foreground`}>{birthdayLine}</p>
+              {birthdayLine && typeof birthdayLine === "object" ? (
+                <div className={`${embedded ? "text-sm" : "text-xs"} text-muted-foreground`}>
+                  <p>{birthdayLine.dateLabel}</p>
+                  <p className={`${embedded ? "text-base" : "text-sm"} font-jua text-foreground`}>{birthdayLine.statusLabel}</p>
+                </div>
               ) : (
                 <p className={`${embedded ? "text-sm" : "text-xs"} text-muted-foreground`}>🎂 태어난 날 정보 없음</p>
               )}
-              {familyLine ? <p className={`${embedded ? "text-sm" : "text-xs"} text-muted-foreground`}>{familyLine}</p> : null}
+              {familyLine && typeof familyLine === "object" ? (
+                <div className={`${embedded ? "text-sm" : "text-xs"} text-muted-foreground mt-0.5`}>
+                  <p>{familyLine.dateLabel}</p>
+                  <p className={`${embedded ? "text-base" : "text-sm"} font-jua text-foreground`}>{familyLine.statusLabel}</p>
+                </div>
+              ) : null}
               {careShareLine ? <p className={`${embedded ? "text-sm" : "text-xs"} text-muted-foreground`}>{careShareLine}</p> : null}
             </div>
             {primaryAction === "edit" && (

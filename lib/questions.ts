@@ -118,8 +118,8 @@ export async function generateOnboardingQuestions(catProfile: CatProfile): Promi
     },
     "q7_photo": {
       id: "q7_photo",
-      text: "우리 집 막둥이 사진도 자랑해주실래요?",
-      description: "오늘의 고양이를 기록으로 남겨보세요. (선택 사항)",
+      text: `오늘의 ${catProfile.name}의 사진이나 영상을 올려주세요!(선택사항)`,
+      description: "",
       type: "photo",
       options: []
     }

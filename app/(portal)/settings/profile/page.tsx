@@ -43,7 +43,6 @@ export default function UserProfileEditPage() {
   const [phone, setPhone] = useState("")
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null)
   const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null)
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -65,7 +64,6 @@ export default function UserProfileEditPage() {
     setEmail(user?.email ?? "")
     setPhone(user?.phone ?? "")
     setProfilePhoto(user?.profilePhoto ?? null)
-    setNotificationsEnabled(user?.notificationsEnabled ?? true)
   }, [user])
 
   const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -114,7 +112,6 @@ export default function UserProfileEditPage() {
         address: address.trim() || undefined,
         phone: phone.trim() || undefined,
         profilePhoto: finalProfilePhoto || undefined,
-        alarmsEnabled: notificationsEnabled,
       })
 
       if (updatedProfile) {
@@ -124,7 +121,6 @@ export default function UserProfileEditPage() {
           address: updatedProfile.address || undefined,
           phone: updatedProfile.phone || undefined,
           profilePhoto: updatedProfile.profilePhoto || undefined,
-          notificationsEnabled: updatedProfile.alarmsEnabled ?? true,
         })
       }
     } catch (error) {
@@ -136,11 +132,6 @@ export default function UserProfileEditPage() {
     router.push("/settings")
   }
 
-  const handleNotificationsToggle = (enabled: boolean) => {
-    if (!user) return
-    setNotificationsEnabled(enabled)
-    updateUser({ notificationsEnabled: enabled })
-  }
 
   const handleChangePassword = async () => {
     if (!accessToken) {
@@ -305,25 +296,6 @@ export default function UserProfileEditPage() {
             <CardTitle className="text-base font-semibold">계정 관리</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Card className="hover:bg-muted/50 transition-colors">
-              <CardContent className="py-0.5 px-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
-                      <Bell className="w-3 h-3 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">이상 신호 알림 받기</p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={notificationsEnabled}
-                    onCheckedChange={handleNotificationsToggle}
-                    aria-label="이상 신호 알림 받기"
-                  />
-                </div>
-              </CardContent>
-            </Card>
 
             <Dialog
               open={isPasswordOpen}
