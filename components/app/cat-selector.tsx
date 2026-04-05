@@ -246,10 +246,10 @@ export function CatSelector({ embedded = false, primaryAction = "select" }: CatS
         <div className="w-full">
           <CardTitle className={`${embedded ? "text-xl" : "text-2xl"} font-jua flex items-center`}>
             <span>{activeCat?.name || "고양이"}</span>
-            {activeCat?.level && (
+            {(activeCat?.level ?? 1) > 0 && (
               <span className="ml-[6px] mt-0.5 relative inline-flex items-center gap-1 text-amber-700 text-xl font-jua tracking-wide">
                 <Sparkles className="w-4 h-4 text-amber-500/80 animate-pulse" />
-                Lv.{activeCat.level}
+                Lv.{activeCat?.level ?? 1}
               </span>
             )}
           </CardTitle>
