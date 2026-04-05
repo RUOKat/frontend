@@ -148,7 +148,8 @@ export default function QuestionsPage() {
       // 💡 [수정] 용량이 큰 사진은 저장용 API에는 보내지 않음 (post 생성에서 별도 처리)
       const answersForBackend = { ...answers };
       delete answersForBackend['q7_photo'];
-      await submitCheckIn(activeCatId, questions, answersForBackend);
+      const todayISO = getTodayISO();
+      await submitCheckIn(activeCatId, questions, answersForBackend, todayISO);
 
       // 3. 월간 케어 기록 업데이트
       updateMonthlyCare(getTodayISO(), activeCatId ?? undefined)

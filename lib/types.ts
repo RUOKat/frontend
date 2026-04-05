@@ -23,6 +23,7 @@ export interface CatProfile {
   // 필수
   id?: string
   name: string
+  level?: number
   adoptionPath: string
   adoptionSource?: AdoptionSource
   adoptionAgencyCode?: string
@@ -32,6 +33,7 @@ export interface CatProfile {
   careShareEndAt?: string // ISO timestamp
   birthDate?: string // ISO string
   familyDate?: string // ISO string
+  /** @deprecated use familyDate instead */
   adoptionDate?: string // ISO string
   estimatedAge?: number // 개월 수
   unknownBirthday: boolean
@@ -126,6 +128,7 @@ export interface User {
   nickname?: string
   address?: string
   notificationsEnabled?: boolean
+  calendarNotificationsEnabled?: boolean
   cameraEnabled?: boolean
   phone?: string
   profilePhoto?: string

@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useActiveCat } from "@/contexts/active-cat-context"
 import type { CatProfile } from "@/lib/types"
 import { getMediaUrl } from "@/lib/backend"
-import { Cat, Check, ChevronDown, PlusCircle, Pencil } from "lucide-react"
+import { Cat, Check, ChevronDown, PlusCircle, Pencil, Sparkles } from "lucide-react"
 import { differenceInDays, differenceInMonths, differenceInYears, addYears, isBefore, startOfDay } from "date-fns"
 
 type DateParts = {
@@ -244,8 +244,14 @@ export function CatSelector({ embedded = false, primaryAction = "select" }: CatS
     <>
       <CardHeader className={headerClassName}>
         <div className="w-full">
-          <CardTitle className={`${embedded ? "text-xl" : "text-2xl"} font-black flex items-center`}>
-            {activeCat?.name || "고양이"}
+          <CardTitle className={`${embedded ? "text-xl" : "text-2xl"} font-jua flex items-center`}>
+            <span>{activeCat?.name || "고양이"}</span>
+            {activeCat?.level && (
+              <span className="ml-[6px] mt-0.5 relative inline-flex items-center gap-1 text-amber-700 text-xl font-jua tracking-wide">
+                <Sparkles className="w-4 h-4 text-amber-500/80 animate-pulse" />
+                Lv.{activeCat.level}
+              </span>
+            )}
           </CardTitle>
           {embedded && <div className="border-b border-border/70 w-full mt-1 mb-2" />}
         </div>

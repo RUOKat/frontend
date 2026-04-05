@@ -9,6 +9,7 @@ export interface UpdateUserProfileData {
   address?: string
   profilePhoto?: string
   alarmsEnabled?: boolean
+  calendarAlarmsEnabled?: boolean
   alarmConfig?: any
   cameraEnabled?: boolean
 }
@@ -23,6 +24,7 @@ export interface UserProfile {
   address?: string
   profilePhoto?: string
   alarmsEnabled?: boolean
+  calendarAlarmsEnabled?: boolean
   alarmConfig?: any
   cameraEnabled?: boolean
   createdAt: string

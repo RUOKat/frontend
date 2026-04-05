@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/chart"
 import { Calendar, MessageCircle, ExternalLink, Bell, Trash2, Loader2, ChevronLeft, ChevronRight, Gift, AlertTriangle, Activity, Sparkles } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
-import { fetchNotifications, markNotificationAsRead, deleteNotification, type Notification } from "@/lib/backend-notifications"
+import { fetchNotifications, markNotificationAsRead, deleteNotification, markNotificationAsUnread, type Notification } from "@/lib/backend-notifications"
 import { getTokens } from "@/lib/backend"
 import { useOnboarding } from "@/contexts/onboarding-context"
 import { getMediaUrl } from "@/lib/backend"
@@ -248,6 +248,7 @@ export default function HomePage() {
   const [dashboardSummary, setDashboardSummary] = useState<DashboardSummary | null>(null)
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(false)
   const [showDashboard, setShowDashboard] = useState(false)
+  const [showBirthdayPopup, setShowBirthdayPopup] = useState(false)
   const [recentSymptomEntries, setRecentSymptomEntries] = useState<SymptomEntry[]>([])
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
 
@@ -269,10 +270,51 @@ export default function HomePage() {
 
   // 캘린더 선택 상태
   const [calendarDate, setCalendarDate] = useState(() => new Date())
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false)
+  const [pickerYear, setPickerYear] = useState(() => new Date().getFullYear())
+
+  useEffect(() => {
+    if (monthPickerOpen) {
+      setPickerYear(calendarDate.getFullYear())
+    }
+  }, [monthPickerOpen, calendarDate])
   const [isLoadingCalendar, setIsLoadingCalendar] = useState(false)
   const [calendarCareData, setCalendarCareData] = useState<string[]>([])
   const [benefitDialogOpen, setBenefitDialogOpen] = useState(false)
   const [editConfirmOpen, setEditConfirmOpen] = useState(false)
+
+  // 생일 체크 효과
+  useEffect(() => {
+    if (activeCat?.birthDate) {
+      const today = new Date()
+      const tMonth = today.getMonth() + 1
+      const tDay = today.getDate()
+      
+      // 시간 정보를 무시하고 YYYY-MM-DD 만 추출
+      const dateString = activeCat.birthDate.includes("T") 
+        ? activeCat.birthDate.split("T")[0] 
+        : activeCat.birthDate.substring(0, 10)
+        
+      const parts = dateString.split("-")
+      if (parts.length >= 3) {
+        const bMonth = parseInt(parts[1], 10)
+        const bDay = parseInt(parts[2], 10)
+        
+        console.log("Birthday check:", { target: `${bMonth}월 ${bDay}일`, today: `${tMonth}월 ${tDay}일` })
+        
+        if (tMonth === bMonth && tDay === bDay) {
+          const storageKey = `birthday_shown_${activeCat.id}_${today.getFullYear()}_${tMonth}_${tDay}`
+          if (!sessionStorage.getItem(storageKey)) {
+            // 팝업이 바로 뜨면 못 볼 수 있으므로 아주 약간의 딜레이
+            setTimeout(() => {
+              setShowBirthdayPopup(true)
+              sessionStorage.setItem(storageKey, "true")
+            }, 300)
+          }
+        }
+      }
+    }
+  }, [activeCat?.id, activeCat?.birthDate])
   
   // 선택된 월과 고양이 조합에 따른 결정론적 스탬프 배치 (새로고침 시 유지, 중복 없음)
   const calYear = calendarDate.getFullYear()
@@ -464,9 +506,41 @@ export default function HomePage() {
     try {
       const backendData = await fetchNotifications()
       
+      const readList: string[] = JSON.parse(localStorage.getItem("mock_read_notifications") || "[]")
+      const delList: string[] = JSON.parse(localStorage.getItem("mock_deleted_notifications") || "[]")
+      
       // 일정 리마인더 생성 추가
       const reminders: Notification[] = []
       const today = startOfDay(new Date())
+      
+      // 생일 알림 추가
+      if (activeCat?.birthDate) {
+        const tMonth = today.getMonth() + 1
+        const tDay = today.getDate()
+        
+        const dateString = activeCat.birthDate.includes("T") 
+          ? activeCat.birthDate.split("T")[0] 
+          : activeCat.birthDate.substring(0, 10)
+          
+        const parts = dateString.split("-")
+        if (parts.length >= 3) {
+          const bMonth = parseInt(parts[1], 10)
+          const bDay = parseInt(parts[2], 10)
+          
+          if (tMonth === bMonth && tDay === bDay) {
+            const id = `rem-birthday-${activeCat.id}-${today.getFullYear()}`
+            reminders.push({
+              id,
+              userId: "local",
+              title: `🎉 오늘 생일이에요! 🎂`,
+              body: `오늘은 사랑스러운 ${activeCat.name}의 생일입니다! 특별한 간식으로 축하해 주세요!`,
+              type: "system",
+              isRead: readList.includes(id),
+              createdAt: new Date().toISOString()
+            })
+          }
+        }
+      }
       
       calendarEvents.forEach(event => {
         if (!event.isNotificationEnabled) return
@@ -475,43 +549,47 @@ export default function HomePage() {
         const diffDays = differenceInDays(eventDate, today)
         
         if (diffDays === 0) {
+          const id = `rem-today-${event.id}`
           reminders.push({
-            id: `rem-today-${event.id}`,
+            id,
             userId: "local",
             title: `[오늘] ${event.title}`,
             body: `${event.title} 일정이 오늘 있습니다. 잊지 마세요! 🐱`,
             type: "schedule",
-            isRead: false,
+            isRead: readList.includes(id),
             createdAt: new Date().toISOString()
           })
         } else if (diffDays === 1) {
+          const id = `rem-tomorrow-${event.id}`
           reminders.push({
-            id: `rem-tomorrow-${event.id}`,
+            id,
             userId: "local",
             title: `[내일] ${event.title}`,
             body: `${event.title} 일정이 내일 있습니다. 미리 준비해 주세요! 🏥`,
             type: "schedule",
-            isRead: false,
+            isRead: readList.includes(id),
             createdAt: new Date().toISOString()
           })
         } else if (diffDays < 0 && !event.isCompleted) {
+          const id = `rem-past-${event.id}`
           reminders.push({
-            id: `rem-past-${event.id}`,
+            id,
             userId: "local",
             title: `[미완료] ${event.title}`,
             body: `지나간 일정(${event.date})이 아직 완료되지 않았어요. 📝`,
             type: "schedule",
-            isRead: false,
+            isRead: readList.includes(id),
             createdAt: new Date().toISOString()
           })
         }
       })
 
-      setNotifications([...backendData, ...reminders])
+      const filteredReminders = reminders.filter(r => !delList.includes(r.id))
+      setNotifications([...filteredReminders, ...backendData])
     } finally {
       setIsLoadingNotifications(false)
     }
-  }, [calendarEvents])
+  }, [calendarEvents, activeCat])
 
 
   // 알림 다이얼로그 열릴 때 로드
@@ -652,10 +730,37 @@ export default function HomePage() {
 
   const handleNotificationClick = async (id: string) => {
     const notification = notifications.find((n) => n.id === id)
-    if (notification?.isRead) return
+    if (!notification) return
+    
+    if (notification.isRead) {
+      // 읽음 -> 안읽음 토글
+      const updated = await markNotificationAsUnread(id)
+      if (updated) {
+        if (id.startsWith("rem-")) {
+          const readList = JSON.parse(localStorage.getItem("mock_read_notifications") || "[]")
+          const idx = readList.indexOf(id)
+          if (idx !== -1) {
+            readList.splice(idx, 1)
+            localStorage.setItem("mock_read_notifications", JSON.stringify(readList))
+          }
+        }
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, isRead: false } : n)),
+        )
+      }
+      return
+    }
 
+    // 안읽음 -> 읽음 처리
     const updated = await markNotificationAsRead(id)
     if (updated) {
+      if (id.startsWith("rem-")) {
+        const readList = JSON.parse(localStorage.getItem("mock_read_notifications") || "[]")
+        if (!readList.includes(id)) {
+          readList.push(id)
+          localStorage.setItem("mock_read_notifications", JSON.stringify(readList))
+        }
+      }
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
       )
@@ -666,6 +771,13 @@ export default function HomePage() {
     e.stopPropagation()
     const success = await deleteNotification(id)
     if (success) {
+      if (id.startsWith("rem-")) {
+        const delList = JSON.parse(localStorage.getItem("mock_deleted_notifications") || "[]")
+        if (!delList.includes(id)) {
+          delList.push(id)
+          localStorage.setItem("mock_deleted_notifications", JSON.stringify(delList))
+        }
+      }
       setNotifications((prev) => prev.filter((n) => n.id !== id))
     }
   }
@@ -801,15 +913,41 @@ export default function HomePage() {
   
   const firstDayIndex = new Date(calYear, calMonthIndex, 1).getDay()
   const totalCells = Math.ceil((firstDayIndex + calDaysInMonth) / 7) * 7
+
+  // Calculate current week boundaries (Mon-Sun) to highlight the active level-up period
+  const currentActualDate = new Date()
+  const currentDayOfWeek = currentActualDate.getDay()
+  const diffToMonday = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1
+  const currentWeekMonday = new Date(currentActualDate)
+  currentWeekMonday.setDate(currentActualDate.getDate() - diffToMonday)
+  currentWeekMonday.setHours(0, 0, 0, 0)
+  
+  const currentWeekSunday = new Date(currentWeekMonday)
+  currentWeekSunday.setDate(currentWeekMonday.getDate() + 6)
+  currentWeekSunday.setHours(23, 59, 59, 999)
   const calendarCells = Array.from({ length: totalCells }, (_, index) => {
     const dayNumber = index - firstDayIndex + 1
     if (dayNumber < 1 || dayNumber > calDaysInMonth) {
-      return <div key={`empty-${index}`} className="aspect-square min-h-[32px]" />
+      const cellDate = new Date(calYear, calMonthIndex, dayNumber)
+      const isCurrentWeek = cellDate.getTime() >= currentWeekMonday.getTime() && cellDate.getTime() <= currentWeekSunday.getTime()
+      
+      return (
+        <div 
+          key={`empty-${index}`} 
+          className={`relative isolate flex aspect-square min-h-[32px] items-center justify-center rounded-md p-0.5 text-[10px] overflow-hidden transition ${
+            isCurrentWeek ? "border-[1.5px] border-amber-200 bg-amber-50/30 shadow-[0px_0px_6px_rgba(253,230,138,0.2)] z-10 scale-[1.01]" : "opacity-40 border border-transparent"
+          }`}
+        >
+          <span className={`font-medium ${isCurrentWeek ? "text-muted-foreground opacity-40" : "text-muted-foreground"}`}>{cellDate.getDate()}</span>
+        </div>
+      )
     }
 
     const dateISO = formatISODate(calYear, calMonthIndex, dayNumber)
+    const cellDate = new Date(calYear, calMonthIndex, dayNumber)
     const isCompleted = calCompletedSet.has(dateISO)
     const isToday = isCurrentMonth && dateISO === todayISO
+    const isCurrentWeek = cellDate.getTime() >= currentWeekMonday.getTime() && cellDate.getTime() <= currentWeekSunday.getTime()
     // 스케줄이 있으면 surveyCompletedDays 확인, 없으면 completedSet 확인
     const hasSurveyStamp = hasSchedule ? surveyCompletedDays.has(dayNumber) : isCompleted
     
@@ -822,35 +960,61 @@ export default function HomePage() {
     const dayEvents = calendarEvents.filter(e => e.date === dateISO)
     const hasEvents = dayEvents.length > 0
     const allEventsCompleted = hasEvents && dayEvents.every(e => e.isCompleted)
+    
+    // 생일 여부 확인 (연도는 무시하고 월/일만 비교)
+    let isBirthday = false
+    if (activeCat?.birthDate) {
+      const parts = activeCat.birthDate.split('-')
+      if (parts.length === 3) {
+        const bMonth = parseInt(parts[1], 10)
+        const bDay = parseInt(parts[2], 10)
+        if (bMonth === calMonthIndex + 1 && bDay === dayNumber) {
+          isBirthday = true
+        }
+      }
+    }
 
     return (
       <button
         key={dateISO}
         type="button"
         onClick={() => handleDayClick(dateISO)}
-        className={`relative isolate flex aspect-square min-h-[32px] items-center justify-center rounded-md border p-0.5 text-[10px] transition cursor-pointer ${isCompleted
-            ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20"
-            : "border-border/40 bg-muted/40 text-muted-foreground hover:bg-muted/60"
-          } ${isToday ? "ring-2 ring-rose-300" : ""}`}
+        className={`relative isolate flex aspect-square min-h-[32px] items-center justify-center rounded-md p-0.5 text-[10px] overflow-hidden transition cursor-pointer ${
+          isCurrentWeek
+            ? "border-[1.5px] border-amber-200 bg-amber-50/30 shadow-[0px_0px_6px_rgba(253,230,138,0.2)] z-10 scale-[1.01]"
+            : isCompleted
+              ? "border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20"
+              : "border border-border/40 bg-muted/40 text-muted-foreground hover:bg-muted/60"
+        }`}
       >
         {resolvedStampSrc ? (
           <>
             <span className="absolute inset-0 flex items-center justify-center stamp-sparkle" aria-hidden="true">
               <span className="stamp-image" style={{ backgroundImage: `url(${resolvedStampSrc})` }} />
             </span>
-            <span className={`absolute right-0.5 top-0.5 rounded px-0.5 text-[8px] font-medium ${isToday ? "bg-rose-300 text-white" : "bg-background/80 text-foreground"}`}>
+            <span className="absolute right-0.5 top-0.5 rounded px-0.5 text-[8px] font-medium bg-background/80 text-foreground z-20">
               {dayNumber}
             </span>
+            {isBirthday && (
+              <span className="absolute left-0.5 top-0.5 text-[10px] drop-shadow-sm z-30 animate-pulse" title={`${activeCat?.name} 생일 축하해요!`}>
+                🎂
+              </span>
+            )}
             {hasEvents && (
-              <div className={`absolute top-1 left-1 w-1.5 h-1.5 rounded-full border border-white shadow-sm z-20 ${allEventsCompleted ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+              <div className={`absolute top-1 left-4 w-1.5 h-1.5 rounded-full border border-white shadow-sm z-30 ${allEventsCompleted ? 'bg-emerald-500' : 'bg-amber-500'}`} />
             )}
 
           </>
         ) : (
-          <span className={`flex flex-col items-center justify-center font-medium ${isToday ? "w-5 h-5 rounded-full bg-rose-300 text-white" : ""}`}>
+          <span className="flex flex-col items-center justify-center font-medium">
             {dayNumber}
+            {isBirthday && (
+              <span className="absolute left-0.5 top-0.5 text-[10px] drop-shadow-sm z-20 animate-pulse" title={`${activeCat?.name} 생일 축하해요!`}>
+                🎂
+              </span>
+            )}
             {hasEvents && (
-              <div className={`absolute top-1 left-1.5 w-1 h-1 rounded-full ${allEventsCompleted ? 'bg-emerald-500 shadow-[0_0_2px_rgba(16,185,129,0.5)]' : 'bg-amber-500 shadow-[0_0_2px_rgba(245,158,11,0.5)]'}`} />
+              <div className={`absolute top-1 left-4 w-1 h-1 rounded-full z-20 ${allEventsCompleted ? 'bg-emerald-500 shadow-[0_0_2px_rgba(16,185,129,0.5)]' : 'bg-amber-500 shadow-[0_0_2px_rgba(245,158,11,0.5)]'}`} />
             )}
           </span>
         )}
@@ -867,7 +1031,7 @@ export default function HomePage() {
         <div className="py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <h1 className="text-xl font-bold mt-1 leading-relaxed">
+              <h1 className="text-2xl font-jua mt-1 leading-relaxed">
                 안녕하세요 <span className="text-primary-foreground/90">{userProfile?.nickname || userProfile?.name || "집사"}</span>님!
               </h1>
             </div>
@@ -901,14 +1065,14 @@ export default function HomePage() {
 
         {/* 월간 케어 참여 기록 */}
         <Card className="overflow-visible">
-          <CardHeader className="p-0 overflow-visible">
-            <div className="flex items-center justify-between overflow-visible h-10 md:h-14 px-4">
-              <CardTitle className="text-base font-semibold flex items-center gap-2 flex-1 overflow-visible">
+          <CardHeader className="p-0 overflow-visible relative">
+            <div className="flex items-center justify-center overflow-visible h-10 md:h-14 px-4 w-full relative">
+              <CardTitle className="text-base font-semibold flex items-center justify-center overflow-visible">
                 {(hasCheckInAnswers || !hasTodayRecord) && (
                   <div className="flex-1 flex justify-center items-center overflow-visible h-full">
                     <Button
                       onClick={handleDiagSurveyClick}
-                      className="relative overflow-visible p-0 h-auto w-auto bg-transparent hover:bg-transparent border-none shadow-none active:scale-95 transition-all group -translate-x-1 md:-translate-x-1"
+                      className="relative overflow-visible p-0 h-auto w-auto bg-transparent hover:bg-transparent border-none shadow-none active:scale-95 transition-all group"
                       title={hasCheckInAnswers ? "기록 완료" : "오늘의 기록 작성하기"}
                     >
                       <div className={!hasTodayRecord ? "animate-light-bounce" : ""}>
@@ -938,49 +1102,81 @@ export default function HomePage() {
                   </div>
                 )}
               </CardTitle>
-              <div className="flex flex-col items-center gap-1">
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={handlePrevMonth}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-xs text-muted-foreground min-w-[80px] text-center">{monthLabel}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={handleNextMonth}
-                    disabled={!canGoNext}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
                 <Button
                   variant="ghost"
-                  className="h-6 px-2 text-[10px] text-amber-500 hover:text-amber-600 hover:bg-amber-50/50 flex items-center gap-1"
+                  className="h-8 px-2.5 text-xs text-amber-500 hover:text-amber-600 hover:bg-amber-50/50 flex flex-col items-center gap-0.5 mt-2"
                   onClick={() => setBenefitDialogOpen(true)}
                 >
-                  <Gift className="w-3.5 h-3.5" />
+                  <Gift className="w-5 h-5" />
                   <span>혜택 보기</span>
                 </Button>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 text-center">
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-xs text-muted-foreground mb-1">진단율</p>
-                <p className="text-lg font-semibold">
-                  {completedSurveyDays}/{targetDays}
-                </p>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-3">
-                <p className="text-xs text-muted-foreground mb-1">참여율</p>
-                <p className="text-lg font-semibold">{completionRatePercent}%</p>
+            <div className="flex flex-col items-center gap-1 mb-2 mt-4 w-full">
+              <div className="flex items-center justify-between w-full px-2 max-w-[360px]">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 rounded-full"
+                  onClick={handlePrevMonth}
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                
+                <Popover open={monthPickerOpen} onOpenChange={setMonthPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <div className="relative flex items-center justify-center cursor-pointer group flex-1 select-none">
+                      <span className="text-[22px] font-black text-foreground text-center tracking-[0.05em] group-hover:text-amber-600 transition-colors">
+                        {monthLabel}
+                      </span>
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-4 rounded-2xl border-amber-100 shadow-xl bg-white/95 backdrop-blur-md" align="center" sideOffset={8}>
+                    <div className="flex items-center justify-between mb-4 px-2">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-amber-50 hover:text-amber-600" onClick={() => setPickerYear(y => y - 1)}>
+                        <ChevronLeft className="h-5 w-5" />
+                      </Button>
+                      <div className="text-lg font-bold text-amber-950">{pickerYear}년</div>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-amber-50 hover:text-amber-600" onClick={() => setPickerYear(y => y + 1)}>
+                        <ChevronRight className="h-5 w-5" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                       {Array.from({ length: 12 }).map((_, i) => {
+                         const isSelected = calendarDate.getFullYear() === pickerYear && calendarDate.getMonth() === i;
+                         return (
+                           <Button
+                             key={i}
+                             variant={isSelected ? "default" : "ghost"}
+                             onClick={() => {
+                               const newDate = new Date(calendarDate);
+                               newDate.setFullYear(pickerYear);
+                               newDate.setMonth(i);
+                               setCalendarDate(newDate);
+                               setMonthPickerOpen(false);
+                             }}
+                             className={`h-10 text-sm font-semibold rounded-xl transition-all ${isSelected ? "bg-amber-500 text-white hover:bg-amber-600 shadow-sm" : "text-amber-800 hover:bg-amber-100 hover:text-amber-700"}`}
+                           >
+                             {i + 1}월
+                           </Button>
+                         );
+                       })}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 rounded-full"
+                  onClick={handleNextMonth}
+                  disabled={!canGoNext}
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </Button>
               </div>
             </div>
 
@@ -989,7 +1185,16 @@ export default function HomePage() {
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
               </div>
             ) : (
-              <div className="grid grid-cols-7 gap-1 px-2">{calendarCells}</div>
+              <div className="flex flex-col gap-1">
+                <div className="grid grid-cols-7 gap-1 px-2 mb-1">
+                  {["일", "월", "화", "수", "목", "금", "토"].map((day, idx) => (
+                    <div key={day} className={`text-center text-[13px] font-bold ${idx === 0 ? 'text-rose-400' : idx === 6 ? 'text-blue-400' : 'text-muted-foreground/70'}`}>
+                      {day}
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-1 px-2">{calendarCells}</div>
+              </div>
             )}
           </CardContent>
         </Card>

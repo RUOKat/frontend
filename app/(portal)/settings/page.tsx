@@ -16,6 +16,8 @@ import {
   Bell,
   Camera,
   Cat,
+  ChevronDown,
+  ChevronRight,
   LogOut,
   Settings,
   ShieldCheck,
@@ -30,6 +32,7 @@ export default function SettingsPage() {
   const isDev = process.env.NODE_ENV === "development"
   
   const [cameraEnabled, setCameraEnabled] = useState(user?.cameraEnabled ?? false)
+  const [showCats, setShowCats] = useState(false)
 
   useEffect(() => {
     setCameraEnabled(user?.cameraEnabled ?? false)
@@ -174,33 +177,59 @@ export default function SettingsPage() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
-                    <Cat className="w-4 h-4 text-muted-foreground" />
+              <div className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => setShowCats(!showCats)}
+                  className="w-full flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2 transition hover:bg-muted/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
+                      <Cat className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">연결된 고양이</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">연결된 고양이</p>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full border border-border bg-background px-2 py-1 text-xs font-medium text-foreground">
+                      {catCount}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showCats ? "rotate-180" : ""}`} />
                   </div>
-                </div>
-                <span className="rounded-full border border-border bg-background px-2 py-1 text-xs font-medium text-foreground">
-                  {catCount}
-                </span>
+                </button>
+                {showCats && cats.length > 0 && (
+                  <div className="px-1 py-1.5 space-y-1.5 animate-in slide-in-from-top-2 fade-in">
+                    {cats.map(cat => (
+                      <div key={cat.id} className="flex items-center gap-3 rounded-lg border border-border/50 bg-background px-3 py-2">
+                        <div className="w-8 h-8 rounded-full bg-muted flex flex-shrink-0 items-center justify-center overflow-hidden">
+                           {cat.profilePhoto ? (
+                             <img src={getMediaUrl(cat.profilePhoto)} alt={cat.name} className="h-full w-full object-cover" />
+                           ) : (
+                             <Cat className="w-4 h-4 text-muted-foreground" />
+                           )}
+                        </div>
+                        <div className="flex-1 min-w-0 text-left">
+                          <p className="text-sm font-semibold text-foreground truncate">{cat.name}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{cat.breed || '품종 정보 없음'} • {cat.gender === 'male' ? '수컷' : '암컷'}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
+              <Link href="/settings/notifications" className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2 transition hover:bg-muted/50">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
                     <Bell className="w-4 h-4 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground">오늘의 기록 알림 받기</p>
+                    <p className="text-sm font-medium text-foreground">알림 받기</p>
                   </div>
                 </div>
-                <span className="rounded-full border border-border bg-background px-2 py-1 text-xs font-medium text-foreground">
-                  {alertStatusLabel}
-                </span>
-              </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground/40" />
+              </Link>
 
 
             </div>

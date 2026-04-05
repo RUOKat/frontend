@@ -90,8 +90,9 @@ function extractUser(payload: unknown): User | null {
       const profilePhoto = typeof data.profilePhoto === "string" ? data.profilePhoto : undefined
       const notificationsEnabled = typeof data.alarmsEnabled === "boolean" ? data.alarmsEnabled : true
       const cameraEnabled = typeof data.cameraEnabled === "boolean" ? data.cameraEnabled : false
+      const calendarNotificationsEnabled = typeof data.calendarAlarmsEnabled === "boolean" ? data.calendarAlarmsEnabled : true
       
-      return { id, sub, email, name, nickname, phone, address, profilePhoto, notificationsEnabled, cameraEnabled }
+      return { id, sub, email, name, nickname, phone, address, profilePhoto, notificationsEnabled, cameraEnabled, calendarNotificationsEnabled }
     }
 
     // {user: {...}} 형식
@@ -112,8 +113,9 @@ function extractUser(payload: unknown): User | null {
       const profilePhoto = typeof data.profilePhoto === "string" ? data.profilePhoto : undefined
       const notificationsEnabled = typeof data.alarmsEnabled === "boolean" ? data.alarmsEnabled : true
       const cameraEnabled = typeof data.cameraEnabled === "boolean" ? data.cameraEnabled : false
+      const calendarNotificationsEnabled = typeof data.calendarAlarmsEnabled === "boolean" ? data.calendarAlarmsEnabled : true
       
-      return { id, sub, email, name, nickname, phone, address, profilePhoto, notificationsEnabled, cameraEnabled }
+      return { id, sub, email, name, nickname, phone, address, profilePhoto, notificationsEnabled, cameraEnabled, calendarNotificationsEnabled }
     }
   }
 

@@ -274,7 +274,7 @@ export default function CatProfilePage() {
               {/* 프로필 사진 */}
 
               <div className="space-y-2">
-                <Label htmlFor="profilePhoto">프로필 사진 (선택)</Label>
+                <Label htmlFor="profilePhoto">프로필 사진</Label>
                 <div className="flex items-center gap-3">
                   <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center overflow-hidden">
                     {profilePhoto ? (
@@ -504,7 +504,7 @@ export default function CatProfilePage() {
                 onClick={() => setIsDeleteOpen(true)}
               >
                 <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                이 고양이 프로필 삭제
+                프로필 삭제
               </Button>
 
               {activeCat?.id && (
@@ -520,8 +520,7 @@ export default function CatProfilePage() {
       {/* 하단 CTA */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border safe-area-bottom">
         <Button onClick={handleSubmit} disabled={!isValid || isSubmitting} className="w-full h-12" size="lg">
-          {isSubmitting ? "저장 중..." : "프로필 저장하고 다음"}
-          <ArrowRight className="w-5 h-5 ml-2" />
+          {isSubmitting ? "저장 중..." : "프로필 저장"}
         </Button>
       </div>
 

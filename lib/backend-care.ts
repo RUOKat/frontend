@@ -58,13 +58,15 @@ export async function fetchQuestionsForPet(petId: string): Promise<QuestionsData
 export async function submitCheckIn(
   petId: string,
   questions: Question[],
-  answers: Record<string, string>
+  answers: Record<string, string>,
+  date?: string
 ): Promise<void> {
   const response = await backendFetch(`/care/${petId}/check-in`, {
     method: 'POST',
     body: JSON.stringify({
       questions,
       answers,
+      date,
     }),
   });
 
