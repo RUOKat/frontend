@@ -245,7 +245,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
         <div className="text-center pt-2">
-          <p className="text-xs text-muted-foreground">Are You Okat? v1.0.0</p>
+          <p className="text-xs text-muted-foreground">Are You Okat? v1.0.1</p>
         </div>
 
         {/* 개발환경 디버깅 섹션 */}
